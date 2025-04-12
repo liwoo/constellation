@@ -23,6 +23,8 @@ defmodule Constellation.Application do
       # {Constellation.Worker, arg},
       # Start Presence for tracking players in games
       ConstellationWeb.Presence,
+      # Add Task Supervisor for managing async tasks
+      {Task.Supervisor, name: Constellation.TaskSupervisor},
       # Start to serve requests, typically the last entry
       ConstellationWeb.Endpoint
     ]

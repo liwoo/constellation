@@ -53,11 +53,15 @@ defmodule ConstellationWeb.GameLive do
       |> assign_new(:show_scores_modal, fn -> false end)
       |> assign_new(:player_scores, fn -> [] end)
       |> assign(:is_owner, current_session_id == game.owner_id)
+      |> assign(:all_fields_filled, false) # Initialize all_fields_filled to false
+      |> assign(:form_values, %{}) # Initialize form_values to an empty map
+      |> assign(:verification_status, nil)
     
     {:ok, socket}
   end
   
-  # Handle form submission to stop round
+  # Handle events
+  @impl true
   def handle_event("stop_round", params, socket) do
     game_id = socket.assigns.game_id
     current_session_id = socket.assigns.current_session_id
@@ -66,8 +70,13 @@ defmodule ConstellationWeb.GameLive do
     if socket.assigns.round_stopped || socket.assigns.is_verifying do
       {:noreply, socket}
     else
+      # Use the stored form values instead of just the params
+      form_values = socket.assigns.form_values || %{}
+      
+      # Merge with params in case there are any new values
       answers = params
         |> Map.drop(["_csrf_token"])
+        |> Map.merge(form_values)
         |> Enum.reduce(%{}, fn {key, value}, acc -> 
           Map.put(acc, key, value) 
         end)
@@ -98,75 +107,8 @@ defmodule ConstellationWeb.GameLive do
       {:noreply, socket}
     end
   end
-  
-  def handle_info({:trigger_verification, game_id, stopper_session_id}, socket) do
-    current_status = GameState.get_game_status(game_id)
 
-    if current_status != "verifying" do
-      Logger.info("Triggering verification for game #{game_id} by stopper #{stopper_session_id}")
-      
-      {:ok, _} = GameState.mark_round_as_stopped(game_id, stopper_session_id)
-
-      Task.start(fn -> 
-          Logger.info("Starting AI verification task for game #{game_id}")
-          GameState.verify_round(game_id) 
-      end)
-    else
-      Logger.info("Verification already in progress or completed for game #{game_id}, skipping trigger.")
-    end
-    {:noreply, socket}
-  end
-  
-  def handle_info({:game_started, data}, socket) do
-    socket = socket
-      |> assign(:current_round, data.round)
-      |> assign(:current_letter, data.letter)
-      |> assign(:current_categories, data.categories)
-      |> assign(:round_stopped, false)
-      |> assign(:game_status, "in_progress")
-      |> assign(:verification_data, nil)
-      |> assign(:is_verifying, false)
-      |> assign(:stopper_name, nil)
-    
-    {:noreply, socket}
-  end
-  
-  def handle_info({:stop_requested, data}, socket) do
-    unless socket.assigns.stopper_name do
-      Logger.info("Received stop request from #{data.player_name}")
-      socket = socket
-        |> assign(:round_stopped, true)
-        |> assign(:is_verifying, true)
-        |> assign(:stopper_name, data.player_name)
-        |> assign(:game_status, "verifying")
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
-  end
-  
-  def handle_info({:round_update, data}, socket) do
-     Logger.info("Received round update: #{inspect(data)}")
-     socket = socket
-       |> assign(:current_round, data.round)
-       |> assign(:current_letter, data.letter)
-       |> assign(:current_categories, data.categories)
-       |> assign(:round_stopped, data.status != "in_progress")
-       |> assign(:game_status, data.status) 
-       |> assign(:verification_data, data.results)
-       |> assign(:is_verifying, data.status == "verifying")
-       |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
-       |> assign(:players, get_players_with_scores(socket.assigns.game_id))
-
-     # If verification just completed, hide verification modal and show scores modal
-     if data.status == "completed_verification" do
-       Process.send_after(self(), :verification_complete, 500)
-       Logger.info("Verification completed, will show scores modal")
-     end
-
-     {:noreply, socket}
-  end
-  
+  @impl true
   def handle_event("stop_game", _value, socket) do
     game_id = socket.assigns.game_id
     current_session_id = socket.assigns.current_session_id
@@ -216,6 +158,179 @@ defmodule ConstellationWeb.GameLive do
     end
   end
   
+  @impl true
+  def handle_event("next_round", _value, socket) do
+    game_id = socket.assigns.game_id
+
+    if socket.assigns.is_owner do
+      Logger.info("Owner triggering next round for game #{game_id}")
+      
+      # Reset game state for the next round and broadcast to all players
+      case Constellation.Games.GameState.advance_to_next_round(game_id) do
+        {:ok, _new_state} ->
+          {:noreply, 
+            socket
+            |> assign(:show_scores_modal, false)
+            |> assign(:player_scores, [])
+            |> assign(:verification_data, nil)
+          }
+        {:error, reason} ->
+          Logger.error("Failed to advance round: #{inspect(reason)}")
+          {:noreply, socket}
+      end
+    else
+      # Ignore if not owner
+      Logger.warning("Non-owner attempted to start next round")
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_sidebar", _value, socket) do
+    {:noreply, update(socket, :show_sidebar, &(!&1))}
+  end
+
+  @impl true
+  def handle_event("validate_input", params, socket) do
+    # Get the current categories
+    categories = socket.assigns.current_categories
+    
+    # Log the received params for debugging
+    Logger.info("Validate input params: #{inspect(params)}")
+    
+    # Get current form values
+    current_values = socket.assigns.form_values || %{}
+    
+    # Update form values with new input - drop internal Phoenix fields
+    updated_values = 
+      params
+      |> Map.drop(["_target", "_csrf_token"])
+      |> Enum.reduce(current_values, fn {k, v}, acc -> 
+          Map.put(acc, k, v) 
+        end)
+    
+    Logger.info("Updated form values: #{inspect(updated_values)}")
+    
+    # Check if all categories have non-empty values
+    all_filled = Enum.all?(categories, fn category ->
+      value = Map.get(updated_values, category, "")
+      result = String.trim(value) != ""
+      Logger.info("Category #{category}: value='#{value}', filled=#{result}")
+      result
+    end)
+    
+    # Log validation result
+    Logger.info("All fields filled: #{all_filled}, categories: #{inspect(categories)}")
+    
+    # Update the all_fields_filled assign and store current values
+    {:noreply, 
+      socket
+      |> assign(:all_fields_filled, all_filled)
+      |> assign(:form_values, updated_values)
+    }
+  end
+  
+  # Handle info
+  @impl true
+  def handle_info({:trigger_verification, game_id, stopper_session_id}, socket) do
+    current_status = GameState.get_game_status(game_id)
+
+    if current_status != "verifying" do
+      Logger.info("Triggering verification for game #{game_id} by stopper #{stopper_session_id}")
+      
+      {:ok, _} = GameState.mark_round_as_stopped(game_id, stopper_session_id)
+
+      # Instead of using Task.Supervisor, we'll use Process.send_after to handle the verification
+      # This keeps the verification process within the LiveView process
+      Process.send_after(self(), {:perform_verification, game_id}, 100)
+      
+      socket = socket
+        |> assign(:verification_status, "starting")
+        |> assign(:show_verification_modal, true)
+      
+      {:noreply, socket}
+    else
+      Logger.info("Verification already in progress or completed for game #{game_id}, skipping trigger.")
+      {:noreply, socket}
+    end
+  end
+  
+  @impl true
+  def handle_info({:perform_verification, game_id}, socket) do
+    Logger.info("Starting verification process for game #{game_id}")
+    
+    # Update socket to show verification in progress
+    socket = socket
+      |> assign(:verification_status, "in_progress")
+    
+    # Perform the verification within the LiveView process
+    case GameState.verify_round(game_id) do
+      {:ok, results} ->
+        Logger.info("Verification completed successfully for game #{game_id}")
+        {:noreply, socket |> assign(:verification_status, "completed")}
+        
+      {:error, reason} ->
+        Logger.error("Verification failed for game #{game_id}: #{inspect(reason)}")
+        {:noreply, socket |> assign(:verification_status, "failed") |> put_flash(:error, "Verification failed: #{inspect(reason)}")}
+    end
+  end
+  
+  @impl true
+  def handle_info({:game_started, data}, socket) do
+    socket = socket
+      |> assign(:current_round, data.round)
+      |> assign(:current_letter, data.letter)
+      |> assign(:current_categories, data.categories)
+      |> assign(:round_stopped, false)
+      |> assign(:game_status, "in_progress")
+      |> assign(:verification_data, nil)
+      |> assign(:is_verifying, false)
+      |> assign(:stopper_name, nil)
+      |> assign(:form_values, %{})  # Reset form values for new round
+      |> assign(:all_fields_filled, false)  # Reset validation state
+    
+    {:noreply, socket}
+  end
+  
+  @impl true
+  def handle_info({:stop_requested, data}, socket) do
+    unless socket.assigns.stopper_name do
+      Logger.info("Received stop request from #{data.player_name}")
+      socket = socket
+        |> assign(:round_stopped, true)
+        |> assign(:is_verifying, true)
+        |> assign(:stopper_name, data.player_name)
+        |> assign(:game_status, "verifying")
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+  
+  @impl true
+  def handle_info({:round_update, data}, socket) do
+     Logger.info("Received round update: #{inspect(data)}")
+     socket = socket
+       |> assign(:current_round, data.round)
+       |> assign(:current_letter, data.letter)
+       |> assign(:current_categories, data.categories)
+       |> assign(:round_stopped, data.status != "in_progress")
+       |> assign(:game_status, data.status) 
+       |> assign(:verification_data, data.results)
+       |> assign(:is_verifying, data.status == "verifying")
+       |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
+       |> assign(:players, get_players_with_scores(socket.assigns.game_id))
+
+     # If verification just completed, hide verification modal and show scores modal
+     if data.status == "completed_verification" do
+       Process.send_after(self(), :verification_complete, 500)
+       Logger.info("Verification completed, will show scores modal")
+     end
+
+     {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(:verification_complete, socket) do 
     # Fetch/calculate scores and verified answers
     game_id = socket.assigns.game_id
@@ -231,38 +346,7 @@ defmodule ConstellationWeb.GameLive do
       |> assign(:player_scores, scores)}
   end
   
-  def handle_event("next_round", _value, socket) do
-    game_id = socket.assigns.game_id
-    current_session_id = socket.assigns.current_session_id
-    owner_id = socket.assigns.owner_id
-
-    if socket.assigns.is_owner do
-      Logger.info("Owner triggering next round for game #{game_id}")
-      
-      # Reset game state for the next round and broadcast to all players
-      case Constellation.Games.GameState.advance_to_next_round(game_id) do
-        {:ok, _new_state} ->
-          {:noreply, 
-            socket
-            |> assign(show_scores_modal: false)
-            |> assign(player_scores: [])
-            |> assign(verification_data: nil)
-          }
-        {:error, reason} ->
-          Logger.error("Failed to advance round: #{inspect(reason)}")
-          {:noreply, socket}
-      end
-    else
-      # Ignore if not owner
-      Logger.warning("Non-owner attempted to start next round")
-      {:noreply, socket}
-    end
-  end
-  
-  def handle_event("toggle_sidebar", _value, socket) do
-    {:noreply, update(socket, :show_sidebar, &(!&1))}
-  end
-  
+  # Private functions
   defp calculate_player_scores(game_id) do
     # Get verification data and calculate scores from the database
     try do
@@ -296,7 +380,7 @@ defmodule ConstellationWeb.GameLive do
           player_scores = entries_by_player
           |> Enum.map(fn {player_id, entries} ->
             # Find player info
-            player = Enum.find(players, fn p -> p.session_id == player_id end)
+            player = Enum.find(players, fn p -> p.id == player_id end)
             player_name = if player, do: player.name, else: "Unknown Player"
             
             # Calculate total score for this player
