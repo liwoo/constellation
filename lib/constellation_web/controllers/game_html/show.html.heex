@@ -1,0 +1,307 @@
+<.flash_group flash={@flash} />
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+  
+  <div class="container mx-auto px-4 py-12 max-w-3xl relative z-10">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4">Game Lobby</h1>
+      <p class="text-xl text-purple-200">Game Code: <span class="font-mono bg-gray-800 px-2 py-1 rounded" id="game-code">{@game.game_code}</span></p>
+      <button id="copy-code-btn" class="mt-2 text-sm bg-purple-800 hover:bg-purple-700 px-3 py-1 rounded-md transition-colors">
+        Copy Code
+      </button>
+    </div>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 mb-6 shadow-lg border border-purple-500/30">
+      <h2 class="text-xl font-semibold text-purple-300 mb-4">
+        Players <span class="text-sm font-normal text-gray-400">(<span id="player-count"><%= length(@players) %></span>/<%= @game.max_players %>)</span>
+      </h2>
+      <ul class="space-y-2" id="players-list">
+        <%= for player <- @players do %>
+          <li class={["flex items-center gap-2 p-2 rounded-lg", player.session_id == @current_session_id && "bg-purple-900/50 border border-purple-500/50"]}>
+            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+              <%= String.first(player.name) %>
+            </div>
+            <span><%= player.name %></span>
+            <%= if player.session_id == @game.owner_id do %>
+              <span class="ml-2 text-xs bg-purple-600 px-2 py-0.5 rounded-full">Host</span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    
+    <%= if @game.owner_id == @current_session_id do %>
+      <div class="text-center" id="start-game-container">
+        <form action={~p"/games/#{@game.id}/start"} method="post" id="start-game-form">
+          <input type="hidden" name="_csrf_token" value={get_csrf_token()}>
+          <button 
+            type="submit" 
+            id="start-game-btn" 
+            class="px-6 py-3 rounded-md text-white bg-green-600 font-medium transition-all hover:bg-green-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-green-800"
+            disabled={length(@players) < 2}
+          >
+            Start Game
+          </button>
+        </form>
+        <p 
+          id="waiting-message" 
+          class="mt-3 text-gray-300 text-sm"
+          style={if length(@players) >= 2, do: "display: none;", else: ""}
+        >
+          Waiting for more players to join... (Minimum: 2, Maximum: <%= @game.max_players %>)
+        </p>
+      </div>
+    <% else %>
+      <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 text-center text-gray-300" id="waiting-message">
+        Waiting for the host to start the game...
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Copy game code functionality
+    const copyCodeBtn = document.getElementById('copy-code-btn');
+    const gameCode = document.getElementById('game-code');
+    
+    copyCodeBtn.addEventListener('click', function() {
+      navigator.clipboard.writeText(gameCode.textContent.trim()).then(() => {
+        copyCodeBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyCodeBtn.textContent = 'Copy Code';
+        }, 2000);
+      });
+    });
+    
+    // Store player data
+    const currentPlayerId = "<%= @current_player.session_id %>";
+    const currentPlayerName = "<%= @current_player.name %>";
+    const isOwner = "<%= @game.owner_id %>" === currentPlayerId;
+    const minPlayers = 2;
+    const maxPlayers = <%= @game.max_players %>;
+    const gameId = "<%= @game.id %>";
+    
+    console.log("Player info:", { 
+      currentPlayerId, 
+      currentPlayerName, 
+      isOwner, 
+      gameId
+    });
+    
+    // Initial player count
+    let currentPlayerCount = <%= length(@players) %>;
+    
+    // Update the start button based on player count
+    function updateStartButtonVisibility() {
+      if (!isOwner) return;
+      
+      const startBtn = document.getElementById('start-game-btn');
+      const waitingMessage = document.getElementById('waiting-message');
+      
+      console.log("updateStartButtonVisibility called:", {
+        currentPlayerCount,
+        minPlayers,
+        isOwner,
+        canStart: currentPlayerCount >= minPlayers,
+        startBtnExists: !!startBtn,
+        waitingMsgExists: !!waitingMessage
+      });
+      
+      if (startBtn) {
+        if (currentPlayerCount >= minPlayers) {
+          startBtn.disabled = false;
+          startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          if (waitingMessage) waitingMessage.style.display = 'none';
+          console.log("Start button ENABLED");
+        } else {
+          startBtn.disabled = true;
+          startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          if (waitingMessage) waitingMessage.style.display = 'block';
+          console.log("Start button DISABLED");
+        }
+      }
+    }
+    
+    // Initial update
+    updateStartButtonVisibility();
+    
+    // Poll for player updates every 3 seconds
+    setInterval(function() {
+      fetch(`/api/games/${gameId}/players`)
+        .then(response => response.json())
+        .then(data => {
+          console.log("Player update received:", data);
+          
+          // Update player count in UI
+          const playerCountEl = document.getElementById('player-count');
+          if (playerCountEl) {
+            playerCountEl.textContent = data.player_count;
+          }
+          
+          // Update player list
+          if (data.players) {
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            
+            data.players.forEach(player => {
+              const isCurrentPlayer = player.session_id === currentPlayerId;
+              const playerItem = document.createElement('li');
+              playerItem.className = `flex items-center gap-2 p-2 rounded-lg player-item ${isCurrentPlayer ? 'bg-purple-900/50 border border-purple-500/50' : ''}`;
+              
+              playerItem.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+                  ${player.name.charAt(0)}
+                </div>
+                <span>${player.name}</span>
+                ${player.session_id === "<%= @game.owner_id %>" ? '<span class="ml-2 text-xs bg-purple-600 px-2 py-0.5 rounded-full">Host</span>' : ''}
+              `;
+              
+              playersList.appendChild(playerItem);
+            });
+          }
+          
+          // Check if player count changed
+          if (data.player_count !== currentPlayerCount) {
+            // If player count increased, show notification
+            if (data.player_count > currentPlayerCount) {
+              // Find the new players (players that aren't the current user)
+              const newPlayers = data.players.filter(player => 
+                player.session_id !== currentPlayerId);
+              
+              // Show notification for new players if we're not the one who just joined
+              if (newPlayers.length > 0 && currentPlayerCount > 0) {
+                showNotification(`${newPlayers[0].name} joined the game!`);
+              }
+            }
+            
+            // Update current count
+            currentPlayerCount = data.player_count;
+            
+            // Update start button visibility
+            updateStartButtonVisibility();
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching player updates:", error);
+        });
+    }, 3000);
+    
+    // Add loading animation to start button
+    if (isOwner) {
+      const startForm = document.getElementById('start-game-form');
+      if (startForm) {
+        startForm.addEventListener('submit', function(e) {
+          const btn = this.querySelector('button');
+          btn.innerHTML = '<span class="inline-flex items-center"><span class="mr-2">Starting</span><span class="loading-dots"></span></span>';
+          btn.disabled = true;
+        });
+      }
+    }
+    
+    function showNotification(message, bgColor = 'bg-purple-600') {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fadeIn`;
+      notification.innerHTML = `<p>${message}</p>`;
+      document.body.appendChild(notification);
+      
+      // Remove notification after 3 seconds
+      setTimeout(() => {
+        notification.classList.add('animate-fadeOut');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 500);
+      }, 3000);
+    }
+  });
+</script>
+
+<style>
+  .stars-container {
+    perspective: 500px;
+    position: absolute;
+    overflow: hidden;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  @keyframes animateStar {
+    from { transform: translateY(0); }
+    to { transform: translateY(-2000px); }
+  }
+  
+  .stars, .stars2, .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    will-change: transform;
+  }
+  
+  .stars {
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=') repeat top center;
+    background-size: 500px 500px;
+    animation: animateStar 80s linear infinite;
+  }
+  
+  .stars2 {
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjAuNSIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==') repeat top center;
+    background-size: 700px 700px;
+    animation: animateStar 120s linear infinite;
+  }
+  
+  .stars3 {
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjAuNzUiIGZpbGw9IiNmZmYiLz48L3N2Zz4=') repeat top center;
+    background-size: 600px 600px;
+    animation: animateStar 160s linear infinite;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  .animate-fadeOut {
+    animation: fadeOut 0.3s ease-in forwards;
+  }
+  
+  .player-item {
+    transition: all 0.3s ease-out;
+  }
+  
+  @keyframes loadingDots {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    75% { content: "..."; }
+    100% { content: ""; }
+  }
+  
+  .loading-dots::after {
+    content: "";
+    display: inline-block;
+    width: 1.5em;
+    text-align: left;
+    animation: loadingDots 1.5s infinite;
+  }
+</style>

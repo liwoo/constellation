@@ -1,0 +1,488 @@
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+  
+  <div class="container mx-auto px-4 py-8 max-w-5xl relative z-10">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">Constellation</h1>
+      <p class="text-xl text-purple-200">Game in Progress</p>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+      <!-- Game board -->
+      <div class="relative bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30">
+        <!-- Hamburger menu button (positioned inside card) -->
+        <button id="sidebar-toggle" class="absolute top-6 right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        <h2 class="text-xl font-semibold text-purple-300 mb-4">Round <span><%= @current_round %></span></h2>
+        <div class="mb-6">
+          <p class="text-lg mb-2">Current Letter: <span class="text-2xl font-bold text-purple-400"><%= @current_letter %></span></p>
+          <div class="bg-gray-700/50 p-4 rounded-lg">
+            <p class="text-gray-300">Fill in words that start with the letter "<span><%= @current_letter %></span>" for each category below:</p>
+          </div>
+        </div>
+        
+        <.form :let={f} for={@form} phx-submit="stop_round" class="space-y-4">
+          <!-- Category inputs -->
+          <div class="space-y-4">
+            <%= for category <- @current_categories do %>
+              <div class="bg-gray-700/50 p-4 rounded-lg">
+                <label class="block text-gray-300 mb-2"><%= category %></label>
+                <input type="text" 
+                  name={category} 
+                  class="form-input w-full bg-gray-800 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder={"Enter a #{String.downcase(category)} that starts with #{@current_letter}..."}
+                  disabled={@round_stopped || @game_status == "verifying"}
+                  required>
+              </div>
+            <% end %>
+          </div>
+          
+          <div class="mt-6 text-center">
+            <button type="submit" 
+              class="w-full px-6 py-4 rounded-md text-white bg-red-600 font-bold text-xl transition-all hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-800" 
+              disabled={@round_stopped || @game_status == "verifying"}>
+              <%= if @round_stopped || @game_status == "verifying", do: "Round ended! Waiting for other players...", else: "STOP" %>
+            </button>
+          </div>
+        </.form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Players sidebar (always hidden initially, fixed position) -->
+<div id="players-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-80 z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
+  <div class="flex justify-end items-center mb-4">
+    <button id="close-sidebar" class="p-1 rounded-md hover:bg-gray-700"> 
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  
+  <div class="mt-6 pt-4 border-t border-gray-700">
+    <h3 class="text-lg font-semibold text-purple-300 mb-2">Game Info</h3>
+    <div class="text-sm text-gray-300 space-y-1">
+      <p>Game ID: <span class="font-mono"><%= @game.id %></span></p>
+      <p>Round: <span><%= @current_round %></span> of <span>26</span></p>
+      <p>
+        <%= if @game_status == "verifying" do %>
+          Round ended! <%= @stopper_name || "Someone" %> pressed STOP!
+        <% else %>
+          <%= if @round_stopped do %>
+            Round stopped! Waiting for other players...
+          <% else %>
+            Waiting for someone to press STOP...
+          <% end %>
+        <% end %>
+      </p>
+    </div>
+  </div>
+  
+  <!-- Leaderboard section -->
+  <div class="mt-6 pt-4 border-t border-gray-700">
+    <h3 class="text-lg font-semibold text-purple-300 mb-2">Leaderboard</h3>
+    <div class="space-y-2" id="leaderboard">
+      <%= for {player, index} <- Enum.with_index(@players) do %>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-gray-700/50">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold"><%= index + 1 %>.</span>
+            <span><%= player.name %></span>
+            <%= if player.session_id == @current_session_id do %>
+              <span class="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">You</span>
+            <% end %>
+          </div>
+          <div class="text-sm font-medium text-gray-300"><%= player.score %> pts</div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Verification modal (non-dismissable) -->
+<%= if @is_verifying do %>
+  <div id="verification-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="bg-gray-800 text-white p-6 md:p-8 rounded-lg shadow-xl max-w-xl w-11/12 max-h-[90vh] overflow-y-auto">
+      <h2 id="modal-title" class="text-2xl font-bold mb-4 text-center text-purple-400">Round Over!</h2>
+      <p class="text-center mb-2"><strong class="text-yellow-400"><%= @stopper_name || "Player" %></strong> stopped the round.</p>
+      
+      <%= if @verification_data do %>
+        <!-- Verification complete - show results -->
+        <div class="mt-4 border-t border-gray-700 pt-4">
+          <h3 class="text-lg font-semibold mb-3 text-center">Results for Letter: <span class="text-2xl font-bold text-purple-400"><%= @current_letter %></span></h3>
+          
+          <!-- Player results accordion -->
+          <div class="space-y-4 max-h-80 overflow-y-auto p-2 bg-gray-900/50 rounded">
+            <%= for player <- @players do %>
+              <div class="player-accordion bg-gray-700/70 rounded overflow-hidden">
+                <!-- Accordion header -->
+                <div class="accordion-header flex items-center justify-between p-3 cursor-pointer hover:bg-gray-600/70">
+                  <div class="flex items-center gap-2">
+                    <span class={if player.session_id == @current_session_id, do: "text-green-300 font-bold", else: "text-white"}>
+                      <%= player.name %><%= if player.session_id == @current_session_id, do: " (You)" %>
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="font-medium text-purple-300"><%= player.score %> pts</span>
+                    <svg class="accordion-icon w-5 h-5 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Accordion content (hidden by default) -->
+                <div class="accordion-content hidden p-3 bg-gray-800/70 border-t border-gray-600">
+                  <%= if @verification_data && Map.has_key?(@verification_data, player.session_id) do %>
+                    <% player_data = @verification_data[player.session_id] %>
+                    <ul class="space-y-2">
+                      <%= for {category, result} <- player_data.category_results do %>
+                        <li class="flex items-start justify-between">
+                          <div>
+                            <span class="text-gray-400"><%= category %>:</span> 
+                            <span class={if result.is_valid, do: "text-green-300", else: "text-red-300"}>
+                              <%= result.answer || "(no answer)" %>
+                            </span>
+                          </div>
+                          <span class={if result.is_valid, do: "font-medium text-green-300", else: "font-medium text-red-300"}>
+                            <%= if result.is_valid, do: "+#{result.points}", else: "0" %> pts
+                          </span>
+                        </li>
+                      <% end %>
+                      
+                      <!-- Show stopper bonus if applicable -->
+                      <%= if player_data.is_stopper && player_data.stopper_bonus > 0 do %>
+                        <li class="flex items-start justify-between mt-2 pt-2 border-t border-gray-600">
+                          <div>
+                            <span class="text-yellow-400">Stopper Bonus:</span>
+                          </div>
+                          <span class="font-medium text-yellow-400">+<%= player_data.stopper_bonus %> pts</span>
+                        </li>
+                      <% end %>
+                    </ul>
+                  <% else %>
+                    <p class="text-gray-400 italic">No data available</p>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          
+          <!-- Next round button (only for host) -->
+          <%= if @current_session_id == @owner_id do %>
+            <div class="mt-6 text-center">
+              <button phx-click="next_round" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors">
+                Continue to Next Round
+              </button>
+            </div>
+          <% else %>
+            <p class="mt-6 text-center text-gray-400">Waiting for host to continue to the next round...</p>
+          <% end %>
+        </div>
+      <% else %>
+        <!-- Verification in progress - show spinner -->
+        <p class="text-center mb-6 text-xl text-purple-300 animate-pulse">🤖 Verifying scores with AI...</p>
+        <div class="flex justify-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<!-- Sidebar Toggle Button (Example Placement) -->
+<button phx-click="toggle_sidebar" class="absolute top-4 left-4 z-20 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+  <%= if @show_sidebar, do: "Hide", else: "Show" %> Sidebar
+</button>
+
+<!-- Sidebar Element -->
+<div id="game-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-80 z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto" style={if @show_sidebar, do: "transform: translateX(0);", else: "transform: translateX(100%);"}>
+  <div class="p-4">
+    <h3 class="text-lg font-semibold mb-2">Game Info</h3>
+    <p>Players: <%= Enum.count(@players) %></p>
+    <!-- Add more sidebar content: player list, settings, etc. -->
+  </div>
+</div>
+
+<!-- Verification Modal -->
+<%= if @show_verification_modal do %>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+      <h3 class="text-xl font-semibold text-gray-800 mb-4">Round Stopped</h3>
+      <p class="text-gray-600">Verifying answers, please wait...</p>
+      <!-- Placeholder for spinner or progress -->
+      <div class="mt-4 border-t border-gray-200 pt-4 text-center">
+         <p class="text-sm text-gray-500">This modal will close automatically.</p>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<!-- Scores Modal -->
+<%= if @show_scores_modal do %>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-lg overflow-y-auto" style="max-height: 80vh;">
+      <h3 class="text-xl font-semibold text-gray-800 mb-4">Round Scores</h3>
+      <div class="accordion space-y-2">
+        <%= for score_entry <- @player_scores do %>
+          <details class="accordion-item border border-gray-200 rounded-md overflow-hidden">
+            <summary class="p-3 bg-gray-100 hover:bg-gray-200 cursor-pointer font-medium flex justify-between items-center">
+              <span><%= score_entry.name %> - Score: <%= score_entry.score %></span>
+              <span class="text-sm text-gray-500">▼</span>
+            </summary>
+            <div class="accordion-content p-4 bg-white border-t border-gray-200">
+              <h4 class="text-md font-semibold mb-2">Verified Answers:</h4>
+              <%= if Enum.empty?(score_entry.verified_answers) do %>
+                 <p class="text-gray-500 italic">No verified answers for this round.</p>
+              <% else %>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <%= for answer <- score_entry.verified_answers do %>
+                    <li><%= answer %></li>
+                  <% end %>
+                </ul>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+        <%= if Enum.empty?(@player_scores) do %>
+          <p class="text-gray-500 italic p-4">No scores available yet.</p>
+        <% end %>
+      </div>
+
+      <div class="mt-6 border-t border-gray-200 pt-4 text-center">
+        <%= if @is_owner do %>
+          <.button phx-click="next_round" class="bg-blue-500 hover:bg-blue-600">Continue to Next Round</.button>
+        <% else %>
+          <p class="text-gray-600">Waiting for the host to start the next round...</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<script>
+  // Sidebar toggle functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, initializing sidebar toggle");
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const closeSidebar = document.getElementById('close-sidebar');
+    const playersSidebar = document.getElementById('players-sidebar');
+    
+    if (!sidebarToggle) console.error("Sidebar toggle button not found!");
+    if (!closeSidebar) console.error("Close sidebar button not found!");
+    if (!playersSidebar) console.error("Players sidebar not found!");
+    
+    // Function to open sidebar
+    function openSidebar() {
+      console.log("Opening sidebar");
+      playersSidebar.classList.remove('translate-x-full');
+      // Add overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'sidebar-overlay';
+      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30';
+      overlay.addEventListener('click', closeSidebarHandler);
+      document.body.appendChild(overlay);
+    }
+    
+    // Function to close sidebar
+    function closeSidebarHandler() {
+      console.log("Closing sidebar");
+      playersSidebar.classList.add('translate-x-full');
+      // Remove overlay
+      const overlay = document.getElementById('sidebar-overlay');
+      if (overlay) {
+        overlay.removeEventListener('click', closeSidebarHandler);
+        overlay.remove();
+      }
+    }
+    
+    // Add event listeners
+    if (sidebarToggle) {
+      console.log("Adding click event to sidebar toggle");
+      sidebarToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openSidebar();
+      });
+    }
+    
+    if (closeSidebar) {
+      closeSidebar.addEventListener('click', closeSidebarHandler);
+    }
+    
+    // Add accordion functionality
+    function initAccordions() {
+      console.log("Initializing accordions");
+      document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', function() {
+          console.log("Accordion clicked");
+          // Toggle the content visibility
+          const content = this.nextElementSibling;
+          content.classList.toggle('hidden');
+          
+          // Rotate the arrow icon
+          const icon = this.querySelector('.accordion-icon');
+          if (icon) {
+            icon.classList.toggle('rotate-180');
+          }
+        });
+      });
+    }
+    
+    // Initialize accordions on load
+    initAccordions();
+    
+    // Re-initialize accordions when the verification modal is shown
+    // This is needed because LiveView might replace the DOM elements
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Check if any verification modal or accordion was added
+          if (document.querySelector('#verification-modal') && 
+              document.querySelector('.player-accordion')) {
+            console.log("Verification modal detected, initializing accordions");
+            initAccordions();
+            
+            // Expand the first accordion by default for better UX
+            const firstHeader = document.querySelector('.accordion-header');
+            if (firstHeader) {
+              setTimeout(() => {
+                firstHeader.click();
+              }, 300);
+            }
+          }
+        }
+      });
+    });
+    
+    // Start observing the document body for DOM changes
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Form validation - disable STOP button until all fields are filled
+    const form = document.querySelector('form[phx-submit="stop_round"]');
+    const stopButton = form ? form.querySelector('button[type="submit"]') : null;
+    const inputs = form ? form.querySelectorAll('input[required]') : [];
+    
+    function validateForm() {
+      if (!stopButton || stopButton.disabled) return;
+      
+      // Check if all required inputs have values
+      let allFilled = true;
+      inputs.forEach(input => {
+        if (!input.value.trim()) {
+          allFilled = false;
+        }
+      });
+      
+      // Only enable the button if all fields are filled
+      stopButton.disabled = !allFilled;
+      if (!allFilled) {
+        stopButton.title = "You must fill all categories before stopping the round";
+      } else {
+        stopButton.title = "Stop the current round";
+      }
+    }
+    
+    // Add input event listeners
+    inputs.forEach(input => {
+      input.addEventListener('input', validateForm);
+    });
+    
+    // Initial validation
+    validateForm();
+  });
+</script>
+
+<style>
+  .stars-container {
+    perspective: 500px;
+    position: absolute;
+    overflow: hidden;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .stars {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 200s linear infinite;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    opacity: 0.5;
+    z-index: 1;
+  }
+
+  .stars2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 100s linear infinite;
+    background-image: 
+      radial-gradient(1px 1px at 100px 150px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 200px 220px, #fff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 300px 300px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 400px 250px, #fff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 400px 400px;
+    opacity: 0.3;
+    z-index: 1;
+  }
+
+  .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 150s linear infinite;
+    background-image: 
+      radial-gradient(1px 1px at 50px 80px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 150px 120px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 250px 180px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 350px 100px, #fff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 300px 300px;
+    opacity: 0.2;
+    z-index: 1;
+  }
+
+  @keyframes rotate {
+    0% {
+      transform: perspective(500px) rotateZ(0deg) rotateX(0deg) rotateY(0deg);
+    }
+    100% {
+      transform: perspective(500px) rotateZ(360deg) rotateX(360deg) rotateY(360deg);
+    }
+  }
+</style>
+
+<style>
+/* Simple style to hide/show sidebar - adapt if using a component library */
+[data-component="sidebar"][data-show="false"] {
+  display: none; /* Or transform: translateX(-100%); */
+}
+
+/* Style for accordion marker */
+details summary::marker { display: none; }
+details summary::-webkit-details-marker { display: none; }
+</style>

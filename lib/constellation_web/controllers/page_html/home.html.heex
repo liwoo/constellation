@@ -1,0 +1,251 @@
+<.flash_group flash={@flash} />
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+  
+  <!-- Constellation lines -->
+  <div class="absolute inset-0 z-0 opacity-20">
+    <svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+      <path d="M100,200 L300,400 L500,150 L700,300 L900,200" stroke="#8b5cf6" stroke-width="1" fill="none" />
+      <path d="M150,500 L350,600 L550,450 L750,700 L950,500" stroke="#8b5cf6" stroke-width="1" fill="none" />
+      <path d="M200,800 L400,700 L600,850 L800,600 L950,800" stroke="#8b5cf6" stroke-width="1" fill="none" />
+      <circle cx="100" cy="200" r="3" fill="#d8b4fe" />
+      <circle cx="300" cy="400" r="4" fill="#d8b4fe" />
+      <circle cx="500" cy="150" r="5" fill="#d8b4fe" />
+      <circle cx="700" cy="300" r="3" fill="#d8b4fe" />
+      <circle cx="900" cy="200" r="4" fill="#d8b4fe" />
+      <circle cx="150" cy="500" r="5" fill="#d8b4fe" />
+      <circle cx="350" cy="600" r="3" fill="#d8b4fe" />
+      <circle cx="550" cy="450" r="4" fill="#d8b4fe" />
+      <circle cx="750" cy="700" r="5" fill="#d8b4fe" />
+      <circle cx="950" cy="500" r="3" fill="#d8b4fe" />
+      <circle cx="200" cy="800" r="4" fill="#d8b4fe" />
+      <circle cx="400" cy="700" r="5" fill="#d8b4fe" />
+      <circle cx="600" cy="850" r="3" fill="#d8b4fe" />
+      <circle cx="800" cy="600" r="4" fill="#d8b4fe" />
+      <circle cx="950" cy="800" r="5" fill="#d8b4fe" />
+    </svg>
+  </div>
+
+  <div class="container mx-auto px-4 py-12 max-w-3xl relative z-10">
+    <div class="text-center mb-12">
+      <div class="flex justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+        </svg>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4 drop-shadow-lg">Welcome to Constellation</h1>
+      <p class="text-xl text-purple-200">Your favorite Word Association Game</p>
+    </div>
+
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 mb-10 shadow-lg border border-purple-500/30 transform hover:scale-[1.01] transition-all">
+      <h2 class="text-xl font-semibold text-purple-300 mb-3 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+        Game Rules
+      </h2>
+      <p class="text-gray-300 mb-4">
+        Constellation is a fun game that tests you and your friends' wit on various topics.  Ultimately you must answer fill up al the blanks ever round with words starting with a particular letter.  The first player to finish STOPS that round, and we tally up the scores for everyone for every round.
+      </p>
+      <a href="#" class="text-purple-400 hover:text-purple-300 inline-flex items-center group">
+        <span>View complete rules</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+
+    <div class="mb-8">
+      <div class="bg-gray-800/80 backdrop-blur-sm p-2 rounded-lg inline-flex w-full md:w-auto shadow-lg">
+        <button id="new-game-btn" class="px-6 py-3 rounded-md text-white bg-purple-600 font-medium transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-800">
+          New Game
+        </button>
+        <button id="join-game-btn" class="px-6 py-3 rounded-md text-gray-300 font-medium transition-all hover:text-white focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-800">
+          Join Game
+        </button>
+      </div>
+    </div>
+
+    <div id="new-game-form" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 transform transition-all">
+      <h2 class="text-xl font-semibold text-purple-300 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z" />
+        </svg>
+        Create New Game
+      </h2>
+      <form action="/games" method="post">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()}>
+        <div class="mb-4 relative">
+          <label for="player-name" class="block text-gray-300 mb-2">Enter Name</label>
+          <input 
+            type="text" 
+            id="player-name" 
+            name="player_name"
+            class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            placeholder="Your name"
+            required
+          >
+          <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-medium py-3 px-4 rounded-md transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-[1.02]">
+          Create Game
+        </button>
+      </form>
+    </div>
+
+    <div id="join-game-form" class="hidden bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 transform transition-all">
+      <h2 class="text-xl font-semibold text-purple-300 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+        </svg>
+        Join Existing Game
+      </h2>
+      <form action="/games/join" method="post">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()}>
+        <div class="mb-4 relative">
+          <label for="player-name-join" class="block text-gray-300 mb-2">Enter Name</label>
+          <input 
+            type="text" 
+            id="player-name-join" 
+            name="player_name"
+            class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            placeholder="Your name"
+            required
+          >
+          <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <div class="mb-4 relative">
+          <label for="game-code" class="block text-gray-300 mb-2">Game Code</label>
+          <input 
+            type="text" 
+            id="game-code" 
+            name="game_code"
+            class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            placeholder="Enter game code"
+            required
+          >
+          <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-medium py-3 px-4 rounded-md transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-[1.02]">
+          Join Game
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const newGameBtn = document.getElementById('new-game-btn');
+    const joinGameBtn = document.getElementById('join-game-btn');
+    const newGameForm = document.getElementById('new-game-form');
+    const joinGameForm = document.getElementById('join-game-form');
+    
+    newGameBtn.addEventListener('click', function() {
+      newGameBtn.classList.add('bg-purple-600');
+      newGameBtn.classList.remove('text-gray-300');
+      newGameBtn.classList.add('text-white');
+      
+      joinGameBtn.classList.remove('bg-purple-600');
+      joinGameBtn.classList.add('text-gray-300');
+      joinGameBtn.classList.remove('text-white');
+      
+      newGameForm.classList.remove('hidden');
+      joinGameForm.classList.add('hidden');
+    });
+    
+    joinGameBtn.addEventListener('click', function() {
+      joinGameBtn.classList.add('bg-purple-600');
+      joinGameBtn.classList.remove('text-gray-300');
+      joinGameBtn.classList.add('text-white');
+      
+      newGameBtn.classList.remove('bg-purple-600');
+      newGameBtn.classList.add('text-gray-300');
+      newGameBtn.classList.remove('text-white');
+      
+      joinGameForm.classList.remove('hidden');
+      newGameForm.classList.add('hidden');
+    });
+    
+    // Initialize with New Game selected
+    newGameBtn.click();
+  });
+</script>
+
+<style>
+  .stars-container {
+    perspective: 500px;
+    position: absolute;
+    overflow: hidden;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  .stars, .stars2, .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 100s linear infinite;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 230px 190px, #fff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 250px 250px;
+    opacity: 0.3;
+  }
+  
+  .stars2 {
+    animation-duration: 150s;
+    background-image: 
+      radial-gradient(1px 1px at 25px 35px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 50px 80px, #ddd, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 100px 50px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 170px 130px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 240px 200px, #ddd, rgba(0,0,0,0));
+    background-size: 300px 300px;
+  }
+  
+  .stars3 {
+    animation-duration: 200s;
+    background-image: 
+      radial-gradient(1px 1px at 30px 40px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 60px 90px, #ddd, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 110px 60px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 180px 140px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 250px 210px, #ddd, rgba(0,0,0,0));
+    background-size: 350px 350px;
+  }
+  
+  @keyframes rotate {
+    0% {
+      transform: perspective(500px) rotateZ(0deg) rotateX(0deg) rotateY(0deg);
+    }
+    100% {
+      transform: perspective(500px) rotateZ(360deg) rotateX(360deg) rotateY(360deg);
+    }
+  }
+</style>

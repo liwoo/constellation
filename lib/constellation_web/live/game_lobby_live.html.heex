@@ -1,0 +1,150 @@
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+  
+  <div class="container mx-auto px-4 py-12 max-w-3xl relative z-10">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4">Game Lobby</h1>
+      <p class="text-xl text-purple-200">Game Code: <span class="font-mono bg-gray-800 px-2 py-1 rounded" id="game-code"><%= @game.game_code %></span></p>
+      <button id="copy-code-btn" class="mt-2 text-sm bg-purple-800 hover:bg-purple-700 px-3 py-1 rounded-md transition-colors">
+        Copy Code
+      </button>
+    </div>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 mb-6 shadow-lg border border-purple-500/30">
+      <h2 class="text-xl font-semibold text-purple-300 mb-4">
+        Players <span class="text-sm font-normal text-gray-400">(<%= length(@players) %>/<%= @game.max_players %>)</span>
+      </h2>
+      <ul class="space-y-2">
+        <%= for player <- @players do %>
+          <li class={["flex items-center gap-2 p-2 rounded-lg", player.session_id == @current_session_id && "bg-purple-900/50 border border-purple-500/50"]}>
+            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+              <%= String.first(player.name) %>
+            </div>
+            <span><%= player.name %></span>
+            <%= if player.session_id == @game.owner_id do %>
+              <span class="ml-2 text-xs bg-purple-600 px-2 py-0.5 rounded-full">Host</span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    
+    <%= if @is_owner do %>
+      <div class="text-center">
+        <button 
+          phx-click="start_game"
+          class="px-6 py-3 rounded-md text-white bg-green-600 font-medium transition-all hover:bg-green-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-green-800"
+          disabled={length(@players) < 2}
+        >
+          Start Game
+        </button>
+        <%= if length(@players) < 2 do %>
+          <p class="mt-3 text-gray-300 text-sm">
+            Waiting for more players to join... (Minimum: 2, Maximum: <%= @game.max_players %>)
+          </p>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 text-center text-gray-300">
+        Waiting for the host to start the game...
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Copy game code functionality
+    const copyCodeBtn = document.getElementById('copy-code-btn');
+    const gameCode = document.getElementById('game-code');
+    
+    copyCodeBtn.addEventListener('click', function() {
+      navigator.clipboard.writeText(gameCode.textContent.trim()).then(() => {
+        copyCodeBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyCodeBtn.textContent = 'Copy Code';
+        }, 2000);
+      });
+    });
+  });
+</script>
+
+<style>
+  .stars-container {
+    perspective: 500px;
+    position: absolute;
+    overflow: hidden;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .stars {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 200s linear infinite;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    opacity: 0.5;
+    z-index: 1;
+  }
+
+  .stars2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 100s linear infinite;
+    background-image: 
+      radial-gradient(1px 1px at 100px 150px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 200px 220px, #fff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 300px 300px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 400px 250px, #fff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 400px 400px;
+    opacity: 0.3;
+    z-index: 1;
+  }
+
+  .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: rotate 150s linear infinite;
+    background-image: 
+      radial-gradient(1px 1px at 50px 80px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 150px 120px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 250px 180px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 350px 100px, #fff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 300px 300px;
+    opacity: 0.2;
+    z-index: 1;
+  }
+
+  @keyframes rotate {
+    0% {
+      transform: perspective(500px) rotateZ(0deg) rotateX(0deg) rotateY(0deg);
+    }
+    100% {
+      transform: perspective(500px) rotateZ(360deg) rotateX(360deg) rotateY(360deg);
+    }
+  }
+</style>

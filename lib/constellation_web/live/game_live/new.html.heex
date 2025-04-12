@@ -1,0 +1,33 @@
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">Create New Game</h1>
+
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <.form
+      for={@changeset}
+      id="game-form"
+      phx-change="validate"
+      phx-submit="save"
+    >
+      <div class="mb-4">
+        <.input field={@changeset[:name]} type="text" label="Name" required={true} />
+      </div>
+
+      <div class="mb-4">
+        <.input field={@changeset[:min_players]} type="number" label="Minimum Players" min={2} />
+      </div>
+
+      <div class="mb-4">
+        <.input field={@changeset[:max_players]} type="number" label="Maximum Players" min={2} />
+      </div>
+
+      <div class="flex items-center justify-between">
+        <.button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+          Create Game
+        </.button>
+        <.link navigate={~p"/games"} class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+          Back
+        </.link>
+      </div>
+    </.form>
+  </div>
+</div>

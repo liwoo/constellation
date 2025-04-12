@@ -1,0 +1,582 @@
+<.flash_group flash={@flash} />
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+  
+  <div class="container mx-auto px-4 py-8 max-w-5xl relative z-10">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">Constellation</h1>
+      <p class="text-xl text-purple-200">Game in Progress</p>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+      <!-- Game board -->
+      <div class="relative bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30">
+        <!-- Hamburger menu button (positioned inside card) -->
+        <button id="sidebar-toggle" class="absolute top-6 right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        <h2 class="text-xl font-semibold text-purple-300 mb-4">Round <span id="current-round">1</span></h2>
+        <div class="mb-6">
+          <p class="text-lg mb-2">Current Letter: <span id="current-letter" class="text-2xl font-bold text-purple-400">S</span></p>
+          <div class="bg-gray-700/50 p-4 rounded-lg">
+            <p class="text-gray-300">Fill in words that start with the letter "<span class="letter-display">S</span>" for each category below:</p>
+          </div>
+        </div>
+        
+        <form id="round-form" class="space-y-4">
+          <!-- Category inputs will be dynamically generated here -->
+          <div id="category-inputs" class="space-y-4">
+            <!-- Loading placeholder -->
+            <div class="bg-gray-700/50 p-4 rounded-lg animate-pulse">
+              <div class="h-5 bg-gray-600 rounded w-1/3 mb-2"></div>
+              <div class="h-10 bg-gray-600 rounded w-full"></div>
+            </div>
+            <div class="bg-gray-700/50 p-4 rounded-lg animate-pulse">
+              <div class="h-5 bg-gray-600 rounded w-1/3 mb-2"></div>
+              <div class="h-10 bg-gray-600 rounded w-full"></div>
+            </div>
+          </div>
+          
+          <div class="mt-6 text-center">
+            <button type="button" id="stop-button" class="w-full px-6 py-4 rounded-md text-white bg-red-600 font-bold text-xl transition-all hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-800" disabled>
+              STOP
+            </button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Players sidebar (always hidden initially, fixed position) -->
+      <div id="players-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-80 z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
+        <div class="flex justify-end items-center mb-4"> 
+          <button id="close-sidebar" class="p-1 rounded-md hover:bg-gray-700"> 
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-gray-700">
+          <h3 class="text-lg font-semibold text-purple-300 mb-2">Game Info</h3>
+          <div class="text-sm text-gray-300 space-y-1">
+            <p>Game ID: <span class="font-mono"><%= @game.id %></span></p>
+            <p>Round: <span id="round-display">1</span> of <span id="total-rounds">26</span></p>
+            <p id="round-status">Waiting for someone to press STOP...</p>
+          </div>
+        </div>
+        
+        <!-- Leaderboard section -->
+        <div class="mt-6 pt-4 border-t border-gray-700">
+          <h3 class="text-lg font-semibold text-purple-300 mb-2">Leaderboard</h3>
+          <div class="space-y-2" id="leaderboard">
+            <%= for {player, index} <- Enum.with_index(@players) do %>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-700/50">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold"><%= index + 1 %>.</span>
+                  <span><%= player.name %></span>
+                  <%= if player.session_id == @current_session_id do %>
+                    <span class="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">You</span>
+                  <% end %>
+                </div>
+                <div class="text-sm font-medium text-gray-300">0 pts</div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verification modal (non-dismissable) -->
+<div id="verification-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="bg-gray-800 text-white p-6 md:p-8 rounded-lg shadow-xl max-w-xl w-11/12">
+    <h2 id="modal-title" class="text-2xl font-bold mb-4 text-center text-purple-400">Round Over!</h2>
+    <p class="text-center mb-2"><strong id="stopper-player-name" class="text-yellow-400">Player</strong> stopped the round.</p>
+    <p class="text-center mb-6 text-xl text-purple-300 animate-pulse">🤖 Verifying scores with AI...</p>
+
+    <div class="mt-4 border-t border-gray-700 pt-4">
+      <h3 class="text-lg font-semibold mb-3 text-center">Submissions for Letter: <span id="modal-round-letter" class="text-2xl font-bold text-purple-400">S</span></h3>
+      <div id="modal-player-answers" class="space-y-4 max-h-60 overflow-y-auto p-2 bg-gray-900/50 rounded">
+        <!-- Player answers will be injected here by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Make current session ID available to JS
+  const currentSessionId = "<%= @current_session_id %>"; 
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle functionality
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const closeSidebar = document.getElementById('close-sidebar');
+    const playersSidebar = document.getElementById('players-sidebar');
+    const body = document.body;
+    
+    // Function to open sidebar
+    function openSidebar() {
+      playersSidebar.classList.remove('translate-x-full');
+      // Add overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'sidebar-overlay';
+      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30'; 
+      overlay.addEventListener('click', closeSidebarHandler);
+      body.appendChild(overlay);
+    }
+    
+    // Function to close sidebar
+    function closeSidebarHandler() {
+      playersSidebar.classList.add('translate-x-full');
+      // Remove overlay
+      const overlay = document.getElementById('sidebar-overlay');
+      if (overlay) {
+        overlay.removeEventListener('click', closeSidebarHandler);
+        overlay.remove();
+      }
+    }
+    
+    sidebarToggle.addEventListener('click', openSidebar);
+    closeSidebar.addEventListener('click', closeSidebarHandler);
+    
+    // Form validation and STOP button functionality
+    const roundForm = document.getElementById('round-form');
+    const stopButton = document.getElementById('stop-button');
+    const formInputs = roundForm.querySelectorAll('.form-input');
+    
+    // Function to check if all inputs are filled
+    function checkFormCompletion() {
+      let allFilled = true;
+      formInputs.forEach(input => {
+        if (!input.value.trim()) {
+          allFilled = false;
+        }
+      });
+      
+      stopButton.disabled = !allFilled;
+    }
+    
+    // Add input event listeners to all form inputs
+    formInputs.forEach(input => {
+      input.addEventListener('input', checkFormCompletion);
+    });
+    
+    // STOP button click handler
+    stopButton.addEventListener('click', function() {
+      // Disable the button to prevent multiple clicks
+      stopButton.disabled = true;
+      
+      // Collect form data
+      const formData = {
+        round: parseInt(document.getElementById('current-round').textContent),
+        letter: document.getElementById('current-letter').textContent,
+        answers: {
+          // Get all form inputs dynamically
+          ...Array.from(roundForm.querySelectorAll('.form-input')).reduce((obj, input) => {
+            obj[input.name] = input.value.trim();
+            return obj;
+          }, {})
+        },
+        stopped: true // Indicate this player pressed STOP
+      };
+      
+      console.log('Round submission:', formData);
+      
+      // Show verification modal
+      showVerificationModal(formData.letter);
+      
+      // Submit round data to server
+      fetch(`/api/games/<%= @game.id %>/rounds`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Round submitted successfully:', data);
+        
+        // Disable form inputs
+        formInputs.forEach(input => {
+          input.disabled = true;
+        });
+        
+        // Disable STOP button
+        stopButton.disabled = true;
+        stopButton.textContent = 'Round ended! Waiting for other players...';
+        
+        // Update round status
+        document.getElementById('round-status').textContent = 'Round ended! Waiting for other players to submit...';
+        
+        // Poll for round updates
+        startPolling();
+      })
+      .catch(error => {
+        console.error('Error submitting round:', error);
+        alert('Failed to submit your answers. Please try again.');
+      });
+    });
+    
+    // Poll for game status updates
+    let pollingInterval;
+    
+    function startPolling() {
+      // Poll immediately
+      pollGameStatus();
+      
+      // Then set up interval (more frequent polling to compensate for not using sockets)
+      pollingInterval = setInterval(pollGameStatus, 1000);
+    }
+    
+    function pollGameStatus() {
+      fetch(`/api/games/<%= @game.id %>/status`)
+        .then(response => response.json())
+        .then(data => {
+          console.log('Game status update:', data);
+          
+          // Check if game state has changed
+          const currentRound = parseInt(document.getElementById('current-round').textContent);
+          const currentLetter = document.getElementById('current-letter').textContent;
+          
+          // Update UI if round or letter has changed
+          if (data.current_round !== currentRound || data.current_letter !== currentLetter) {
+            console.log('Game state changed, updating UI...');
+            
+            // Update round and letter
+            document.getElementById('current-round').textContent = data.current_round;
+            document.getElementById('round-display').textContent = data.current_round;
+            
+            if (data.current_letter) {
+              document.getElementById('current-letter').textContent = data.current_letter;
+              document.querySelectorAll('.letter-display').forEach(el => {
+                el.textContent = data.current_letter;
+              });
+            }
+            
+            // Reset form and enable inputs for new round
+            resetForm();
+            enableForm();
+          }
+          
+          // Update categories and form inputs if they've changed
+          if (data.current_categories && data.current_categories.length > 0) {
+            updateCategoryInputs(data.current_categories, data.current_letter);
+          }
+          
+          // Check if round is in verification state
+          if (data.status === "verifying") {
+            showVerificationModal(data.current_letter, data.stopper_name, data.player_answers);
+            
+            // Disable form during verification
+            disableForm();
+            document.getElementById('round-status').textContent = `Round ended! ${data.stopper_name || 'Someone'} pressed STOP!`;
+          } else if (data.status === "in_progress" && document.getElementById('verification-modal').classList.contains('flex')) {
+            // If we were verifying but now we're back to in_progress, hide the modal
+            hideVerificationModal();
+          }
+          
+          // Update players and leaderboard
+          if (data.players) {
+            updatePlayersAndLeaderboard(data.players);
+          }
+          
+          // Update round status if not in verification
+          if (data.status === "in_progress") {
+            if (data.round_stopped) {
+              document.getElementById('round-status').textContent = 'Round stopped! Waiting for other players...';
+              disableForm();
+            } else {
+              document.getElementById('round-status').textContent = 'Waiting for someone to press STOP...';
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error polling game status:', error);
+        });
+    }
+    
+    function resetForm() {
+      const form = document.getElementById('round-form');
+      if (form) {
+        form.reset();
+      }
+    }
+    
+    function enableForm() {
+      const formInputs = document.querySelectorAll('.form-input');
+      formInputs.forEach(input => {
+        input.disabled = false;
+      });
+      
+      const stopButton = document.getElementById('stop-button');
+      if (stopButton) {
+        stopButton.disabled = true; // Initially disabled until all fields are filled
+        stopButton.textContent = 'STOP';
+      }
+    }
+    
+    function disableForm() {
+      const formInputs = document.querySelectorAll('.form-input');
+      formInputs.forEach(input => {
+        input.disabled = true;
+      });
+      
+      const stopButton = document.getElementById('stop-button');
+      if (stopButton) {
+        stopButton.disabled = true;
+        stopButton.textContent = 'Round ended! Waiting for other players...';
+      }
+    }
+    
+    function updatePlayersAndLeaderboard(players) {
+      // Rebuild leaderboard (new logic)
+      const leaderboard = document.getElementById('leaderboard');
+      if (!leaderboard) return;
+      
+      // Sort players by score
+      const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+      
+      leaderboard.innerHTML = '';
+      
+      sortedPlayers.forEach((player, index) => {
+        const playerItem = document.createElement('div');
+        playerItem.className = 'flex items-center justify-between p-2 rounded-lg bg-gray-700/50';
+        
+        let playerHtml = `
+          <span class="text-sm font-bold">${index + 1}.</span>
+          <span>${player.name}</span>
+        `;
+        
+        // Add 'You' badge using JavaScript
+        if (player.session_id === currentSessionId) {
+          playerHtml += ` <span class="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">You</span>`;
+        }
+        
+        playerItem.innerHTML = `
+          <div class="flex items-center gap-2">
+            ${playerHtml}
+          </div>
+          <div class="text-sm font-medium text-gray-300">${player.score} pts</div>
+        `;
+        
+        leaderboard.appendChild(playerItem);
+      });
+    }
+    
+    // Function to update category inputs based on server data
+    function updateCategoryInputs(categories, letter) {
+      const container = document.getElementById('category-inputs');
+      const currentInputs = container.querySelectorAll('.form-input');
+      const currentCategories = Array.from(currentInputs).map(input => input.name);
+      
+      // Check if categories have changed
+      const categoriesChanged = 
+        categories.length !== currentCategories.length || 
+        !categories.every(cat => currentCategories.includes(cat));
+      
+      // Only rebuild if categories have changed
+      if (categoriesChanged) {
+        container.innerHTML = '';
+        
+        categories.forEach(category => {
+          const div = document.createElement('div');
+          div.className = 'bg-gray-700/50 p-4 rounded-lg';
+          
+          div.innerHTML = `
+            <label class="block text-gray-300 mb-2">${category}</label>
+            <input type="text" name="${category}" class="form-input w-full bg-gray-800 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter a ${category.toLowerCase()} that starts with ${letter}...">
+          `;
+          
+          container.appendChild(div);
+        });
+        
+        // Re-add event listeners to new inputs
+        const formInputs = container.querySelectorAll('.form-input');
+        formInputs.forEach(input => {
+          input.addEventListener('input', checkFormCompletion);
+        });
+        
+        // Check form completion status
+        checkFormCompletion();
+      }
+    }
+    
+    // Function to show verification modal
+    function showVerificationModal(letter, stopperName = null, playerAnswers = null) {
+      const modal = document.getElementById('verification-modal');
+      const letterDisplay = document.getElementById('modal-round-letter');
+      const stopperDisplay = document.getElementById('stopper-player-name');
+      const answersContainer = document.getElementById('modal-player-answers');
+      
+      // Set letter
+      letterDisplay.textContent = letter;
+      
+      // Set stopper name if provided
+      if (stopperName) {
+        stopperDisplay.textContent = stopperName;
+      }
+      
+      // Populate player answers if provided
+      if (playerAnswers && Array.isArray(playerAnswers)) {
+        answersContainer.innerHTML = '';
+        
+        playerAnswers.forEach(player => {
+          const playerDiv = document.createElement('div');
+          playerDiv.className = 'p-3 bg-gray-700/70 rounded';
+          
+          // Highlight current player
+          const isCurrentPlayer = player.session_id === currentSessionId;
+          const nameClass = isCurrentPlayer ? 'font-semibold text-green-300' : 'font-semibold text-purple-300';
+          
+          let playerHtml = `<p class="${nameClass}">${player.name}${isCurrentPlayer ? ' (You)' : ''}</p>`;
+          playerHtml += '<ul class="text-sm grid grid-cols-2 gap-x-4 gap-y-1 mt-2">';
+          
+          // Add each category/answer
+          for (const [category, answer] of Object.entries(player.answers)) {
+            playerHtml += `
+              <li><strong class="text-gray-400">${category}:</strong> 
+                <span class="text-white">${answer || '<em class="text-gray-500">No answer</em>'}</span>
+              </li>
+            `;
+          }
+          
+          playerHtml += '</ul>';
+          playerDiv.innerHTML = playerHtml;
+          answersContainer.appendChild(playerDiv);
+        });
+      }
+      
+      // Show modal
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    
+    // Function to hide verification modal
+    function hideVerificationModal() {
+      const modal = document.getElementById('verification-modal');
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+    }
+    
+    // Initialize the game
+    function initializeGame() {
+      // Start polling immediately
+      startPolling();
+    }
+    
+    initializeGame();
+  });
+</script>
+
+<style>
+  .stars-container {
+    perspective: 500px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+  }
+  
+  .stars, .stars2, .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-size: cover;
+  }
+  
+  .stars {
+    background-image: 
+      radial-gradient(1px 1px at 25px 5px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 50px 25px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 125px 20px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1.5px 1.5px at 50px 75px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2px 2px at 15px 125px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2.5px 2.5px at 110px 80px, white, rgba(255, 255, 255, 0));
+    animation: starsAnimation 200s linear infinite;
+  }
+  
+  .stars2 {
+    background-image: 
+      radial-gradient(1px 1px at 75px 105px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 100px 125px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 175px 120px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1.5px 1.5px at 100px 175px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2px 2px at 65px 225px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2.5px 2.5px at 160px 180px, white, rgba(255, 255, 255, 0));
+    animation: starsAnimation 150s linear infinite;
+  }
+  
+  .stars3 {
+    background-image: 
+      radial-gradient(1px 1px at 175px 205px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 200px 225px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1px 1px at 275px 220px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(1.5px 1.5px at 200px 275px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2px 2px at 165px 325px, white, rgba(255, 255, 255, 0)),
+      radial-gradient(2.5px 2.5px at 260px 280px, white, rgba(255, 255, 255, 0));
+    animation: starsAnimation 100s linear infinite;
+  }
+  
+  @keyframes starsAnimation {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-2000px);
+    }
+  }
+  
+  /* Sidebar styles */
+  #players-sidebar {
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+    max-height: 100vh;
+  }
+  
+  @media (max-width: 1023px) {
+    #players-sidebar {
+      width: 85%;
+      max-width: 320px;
+    }
+  }
+  
+  /* Sidebar overlay animation */
+  #sidebar-overlay {
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  /* Loading dots animation */
+  .loading-dots:after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+  }
+  
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60% { content: '...'; }
+    80%, 100% { content: ''; }
+  }
+</style>

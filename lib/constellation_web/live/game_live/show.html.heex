@@ -1,0 +1,92 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold"><%= @game.name %></h1>
+    <span class={ConstellationWeb.GameLive.Index.status_class(@game.status)}>
+      <%= @game.status %>
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Game Info -->
+    <div class="bg-white shadow-md rounded-lg p-6 md:col-span-1">
+      <h2 class="text-xl font-semibold mb-4">Game Information</h2>
+      <div class="space-y-2">
+        <p><span class="font-medium">Status:</span> <%= @game.status %></p>
+        <p><span class="font-medium">Players:</span> <%= length(@players) %> / <%= @game.max_players %></p>
+        <p><span class="font-medium">Minimum Players:</span> <%= @game.min_players %></p>
+        <p><span class="font-medium">Created:</span> <%= Calendar.strftime(@game.inserted_at, "%Y-%m-%d %H:%M") %></p>
+      </div>
+
+      <div class="mt-6">
+        <%= if @is_owner and @can_start do %>
+          <button phx-click="start_game" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Start Game
+          </button>
+        <% else %>
+          <%= if @is_owner and not @can_start do %>
+            <button disabled class="w-full bg-gray-300 text-white font-bold py-2 px-4 rounded cursor-not-allowed">
+              Waiting for Players (<%= length(@players) %>/<%= @game.min_players %> minimum)
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="mt-4">
+        <.link navigate={~p"/games"} class="text-blue-500 hover:text-blue-700">Back to Games</.link>
+      </div>
+    </div>
+
+    <!-- Players List -->
+    <div class="bg-white shadow-md rounded-lg p-6 md:col-span-1">
+      <h2 class="text-xl font-semibold mb-4">Players (<%= length(@players) %>)</h2>
+      <ul class="divide-y divide-gray-200">
+        <%= for player <- @players do %>
+          <li class="py-3 flex items-center">
+            <div class="flex-1">
+              <p class="font-medium"><%= player.name %></p>
+              <p class="text-sm text-gray-500">
+                <%= if @game.owner_id == player.session_id do %>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Owner</span>
+                <% end %>
+              </p>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <!-- Join Form -->
+    <div class="bg-white shadow-md rounded-lg p-6 md:col-span-1">
+      <%= if is_nil(@current_player) and @game.status == :waiting do %>
+        <h2 class="text-xl font-semibold mb-4">Join Game</h2>
+        <.form
+          for={%{}}
+          id="join-form"
+          phx-submit="join_game"
+        >
+          <div class="mb-4">
+            <.input type="text" field={:name} label="Your Name" value={@player_name} required={true} />
+          </div>
+
+          <div>
+            <.button class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+              Join Game
+            </.button>
+          </div>
+        </.form>
+      <% else %>
+        <h2 class="text-xl font-semibold mb-4">Game Status</h2>
+        <%= if @game.status == :waiting do %>
+          <div class="p-4 bg-yellow-100 text-yellow-800 rounded-lg">
+            <p class="font-medium">Waiting for players to join...</p>
+            <p class="text-sm mt-2">The game will start once the owner clicks the Start Game button.</p>
+          </div>
+        <% else %>
+          <div class="p-4 bg-green-100 text-green-800 rounded-lg">
+            <p class="font-medium">Game in progress!</p>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>
