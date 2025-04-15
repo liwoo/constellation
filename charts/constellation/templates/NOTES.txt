@@ -1,0 +1,38 @@
+{{- define "constellation.notes" -}}
+Constellation has been deployed.
+
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ range $path := $host.paths }}{{ $path.path }}{{ end }}
+{{- end }}
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "constellation.fullname" . }} --template "{{ "{{ range (index .status.loadBalancer.ingress 0) }}{{ . }}{{ end }}" }}")
+  echo "Visit http://$SERVICE_IP:{{ .Values.service.port }} to use your application"
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "constellation.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  http://$NODE_IP:$NODE_PORT
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "constellation.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:{{ .Values.service.targetPort }}
+{{- end }}
+
+**IMPORTANT NOTES:**
+
+1.  **Docker Image:** Make sure you have updated the `image.repository` value in `values.yaml` to point to your actual Docker image.
+2.  **Secrets:** This chart expects a Kubernetes Secret named `constellation-secrets` (or the name specified in `values.yaml`) containing:
+    *   `GEMINI_API_KEY`: Your Google Gemini API key.
+    *   `SECRET_KEY_BASE`: Your Phoenix secret key base.
+    You can create it using kubectl:
+    ```bash
+    kubectl create secret generic constellation-secrets \
+      --from-literal=GEMINI_API_KEY='YOUR_API_KEY' \
+      --from-literal=SECRET_KEY_BASE='$(mix phx.gen.secret)'
+    ```
+3.  **Database:** The current configuration assumes a PostgreSQL service named `postgres` in the `default` namespace. Adjust `DATABASE_URL` in `deployment.yaml` if your setup differs.
+4.  **TLS:** The Ingress is configured for TLS using the secret `constellation-tls`. Ensure this secret exists or adjust the configuration in `values.yaml`.
+5.  **Health Check:** The deployment uses a `/health` endpoint for liveness and readiness probes. You might need to add this endpoint to your Phoenix application.
+{{- end -}}
+{{ include "constellation.notes" . }}

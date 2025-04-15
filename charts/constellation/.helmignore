@@ -1,0 +1,11 @@
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# negation (prefixed with !).
+
+.DS_Store
+*.swp
+*.swo
+*~
+.git/
+.gitignore
+.vscode/

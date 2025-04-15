@@ -21,6 +21,9 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  # Always enable the server in production
+  config :constellation, ConstellationWeb.Endpoint, server: true
+  
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

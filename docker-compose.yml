@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jeremiahchienda/constellation:0.1
+    environment:
+      - PORT=3000
+      - PHX_HOST=games.kwathu.ai
+      # Add other environment variables as needed

@@ -15,7 +15,8 @@ defmodule Constellation.Application do
   @impl true
   def start(_type, _args) do
     # Load environment variables from .env file in development
-    if Mix.env() in [:dev, :test] do
+    # Only try to use Mix if it's available (not in production releases)
+    if Code.ensure_loaded?(Mix) and Mix.env() in [:dev, :test] do
       DotenvParser.load_file(".env")
     end
 

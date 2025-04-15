@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: constellation
+  namespace: doorbell
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - games.kwathu.ai
+      secretName: games-kwathu-tls  # This is correct, but the deployed Ingress is using a different secret
+  rules:
+    - host: games.kwathu.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: constellation
+                port:
+                  number: 80

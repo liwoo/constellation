@@ -1,0 +1,16 @@
+apiVersion: v2
+name: constellation
+description: A Helm chart for deploying the Constellation word game
+
+# A chart can be either an 'application' or a 'library' chart.
+# Application charts are deployable units of software.
+# Library charts provide useful utilities or functions for the chart developer.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the application version.
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application.
+appVersion: "1.0.0"

@@ -1,0 +1,106 @@
+# Default values for constellation chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: your-docker-repo/constellation # CHANGE THIS to your Docker image repository
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations:
+    kubernetes.io/service-account-token-volume-name: "token-volume"
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "default"
+  # Disable auto-mounting of service account token
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80 # Port the service listens on
+  targetPort: 3000 # Port the container listens on
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: games.kwathu.ai
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: games-kwathu-tls
+      hosts:
+        - games.kwathu.ai
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Define application-specific configuration
+config:
+  # The secret name containing the GEMINI_API_KEY
+  geminiApiKeySecretName: "ai-keys"
+  geminiApiKeySecretKey: "gemini-api-key"
+  # Secret key base configuration
+  secretKeyBaseSecretName: "ai-keys"
+  secretKeyBaseSecretKey: "secret-key-base"
+
+# Database configuration
+database:
+  host: "database-host" # Replace with your actual database host
+  port: "5432"
+  name: "database-name" # Replace with your actual database name
+  ssl: "false"
+  secretName: "database-secret" # Secret containing database credentials
+  secretUserKey: "user" # Key in the secret containing the database username
+  secretPasswordKey: "password" # Key in the secret containing the database password
+  poolMin: "0" # Adjust this based on your needs
+  poolMax: "10" # Adjust this based on your needs

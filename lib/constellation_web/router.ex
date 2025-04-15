@@ -30,6 +30,9 @@ defmodule ConstellationWeb.Router do
     get "/rules", RulesController, :index
     get "/leaderboard", LeaderboardController, :index
     get "/leaderboard/:game_id", LeaderboardController, :show
+    
+    # Health check for Kubernetes probes
+    get "/health", HealthController, :check
   end
 
   # Other scopes may use custom stacks.

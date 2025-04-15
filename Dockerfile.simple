@@ -1,0 +1,43 @@
+# Simpler Dockerfile for cross-platform builds
+FROM elixir:1.15.8-slim
+
+# Set environment variables
+ENV MIX_ENV=prod
+ENV PORT=3000
+ENV PHX_HOST=games.kwathu.ai
+
+# Install dependencies
+RUN apt-get update -y && \
+    apt-get install -y build-essential git curl nodejs npm --no-install-recommends && \
+    apt-get clean && \
+    rm -f /var/lib/apt/lists/*_*
+
+# Create app directory
+WORKDIR /app
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Copy application files
+COPY . .
+
+# Set Erlang VM flags to help with memory issues during build
+ENV ERL_FLAGS="+JPperf true +Muacnl 0 +MIscs 512"
+
+# Get dependencies and compile
+RUN mix deps.get --only prod
+RUN mix deps.compile
+
+# Install esbuild and tailwind for asset compilation
+RUN mix local.hex --force
+RUN mix archive.install hex phx_new --force
+RUN mix assets.deploy
+
+# Compile and build release
+RUN mix compile
+RUN mix release
+
+# Set the entrypoint
+ENTRYPOINT ["/app/_build/prod/rel/constellation/bin/constellation"]
+CMD ["start"]
