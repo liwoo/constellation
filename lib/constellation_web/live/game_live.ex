@@ -181,6 +181,9 @@ defmodule ConstellationWeb.GameLive do
             |> assign(:show_scores_modal, false)
             |> assign(:player_scores, [])
             |> assign(:verification_data, nil)
+            |> assign(:form_values, %{})  # Reset form values for new round
+            |> assign(:form, to_form(%{}))  # Reset the form itself
+            |> assign(:all_fields_filled, false)  # Reset validation state
           }
         {:error, reason} ->
           Logger.error("Failed to advance round: #{inspect(reason)}")
@@ -252,6 +255,8 @@ defmodule ConstellationWeb.GameLive do
       |> assign(:stopper_name, nil)
       |> assign(:form_values, %{})  # Reset form values for new round
       |> assign(:all_fields_filled, false)  # Reset validation state
+      |> assign(:form, to_form(%{}))  # Reset the form itself
+      |> assign(:show_scores_modal, false)  # Dismiss the scores modal for all players
     
     # Start countdown for the new round
     Process.send_after(self(), :start_countdown, 100)
@@ -287,9 +292,12 @@ defmodule ConstellationWeb.GameLive do
        |> assign(:is_verifying, data.status == "verifying")
        |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
        |> assign(:players, get_players_with_scores(socket.assigns.game_id))
+       |> assign(:form_values, %{})  # Reset form values for new round
+       |> assign(:form, to_form(%{}))  # Reset the form itself
 
-     # If the game status is "in_progress", start the countdown
+     # If the game status is "in_progress", dismiss the scores modal and start the countdown
      if data.status == "in_progress" do
+       socket = socket |> assign(:show_scores_modal, false)  # Dismiss the scores modal
        Process.send_after(self(), :start_countdown, 100)
      end
 
@@ -379,8 +387,11 @@ defmodule ConstellationWeb.GameLive do
         Process.send_after(self(), :tick_countdown, 1000)
         {:noreply, socket}
       else
-        # Countdown finished, hide the modal
-        socket = socket |> assign(:show_countdown_modal, false)
+        # Countdown finished, hide the modal and ensure form is reset
+        socket = socket 
+          |> assign(:show_countdown_modal, false)
+          |> assign(:form_values, %{})  # Reset form values when countdown ends
+          |> assign(:form, to_form(%{}))  # Reset the form itself
         {:noreply, socket}
       end
     else

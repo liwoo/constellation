@@ -575,6 +575,17 @@ defmodule Constellation.Games.GameState do
           }}
         )
         
+        # Also broadcast game_started event to ensure all players get the countdown
+        Phoenix.PubSub.broadcast(
+          Constellation.PubSub,
+          "game:#{game_id}",
+          {:game_started, %{
+            round: updated_state.current_round,
+            letter: updated_state.current_letter,
+            categories: updated_state.current_categories
+          }}
+        )
+        
         {:ok, updated_state}
     end
   end
