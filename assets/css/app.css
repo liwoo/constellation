@@ -18,3 +18,25 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.2rem;
   letter-spacing: 0.05em;
 }
+
+/* Sidebar text contrast improvements */
+#players-sidebar h3,
+#game-sidebar h3 {
+  color: white !important;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+#players-sidebar p,
+#game-sidebar p,
+#players-sidebar span,
+#game-sidebar span,
+#players-sidebar div,
+#leaderboard div {
+  color: white !important;
+}
+
+#leaderboard .text-gray-300 {
+  color: white !important;
+}
