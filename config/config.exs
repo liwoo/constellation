@@ -53,6 +53,9 @@ config :tailwind,
     cd: Path.expand("../assets", __DIR__)
   ]
 
+# Configure Tesla to use Hackney adapter
+config :tesla, adapter: Tesla.Adapter.Hackney
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

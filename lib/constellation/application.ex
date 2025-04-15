@@ -5,6 +5,13 @@ defmodule Constellation.Application do
 
   use Application
 
+  def application do
+    [
+      mod: {Constellation.Application, []},
+      extra_applications: [:logger, :runtime_tools, :tesla]
+    ]
+  end
+
   @impl true
   def start(_type, _args) do
     # Load environment variables from .env file in development

@@ -6,6 +6,7 @@ defmodule Constellation.Games.GameState do
   alias Constellation.Games.Game
   alias Constellation.Games.Categories
   alias Constellation.Games.AIVerifier
+  alias Constellation.Games.RoundEntry
   require Logger
 
   schema "game_states" do
@@ -105,11 +106,50 @@ defmodule Constellation.Games.GameState do
         # Update the existing state without broadcasting - PubSub is now handled by LiveView
         Logger.info("Marking round as stopped for game #{game_id}, stopper_id: #{stopper_id}")
         
+        # First, load all player answers from the database to ensure they're in the game state
+        round_entries = Constellation.Games.RoundEntry.get_entries_for_round(game_id, state.current_round)
+        
+        # Group entries by player
+        player_answers_map = round_entries
+          |> Enum.group_by(fn entry -> entry.player_id end)
+          |> Enum.map(fn {player_id, entries} -> 
+            # Find player name from the player association
+            player_name = case Enum.at(entries, 0) do
+              nil -> "Unknown Player"
+              entry -> 
+                if entry.player && entry.player.name do
+                  entry.player.name
+                else
+                  "Player #{player_id}"
+                end
+            end
+            
+            # Convert entries to a map of category -> answer
+            answers = Enum.reduce(entries, %{}, fn entry, acc ->
+              Map.put(acc, entry.category, entry.answer)
+            end)
+            
+            # Return the player answer structure
+            {player_id, %{
+              "session_id" => player_id,
+              "name" => player_name,
+              "answers" => answers
+            }}
+          end)
+          |> Enum.into(%{})
+        
+        # Update the player_answers field for the current round
+        current_round_str = "#{state.current_round}"
+        updated_player_answers = Map.put(state.player_answers || %{}, current_round_str, player_answers_map)
+        
+        Logger.info("Loaded #{map_size(player_answers_map)} player answer sets from database for verification")
+        
         result = state
         |> changeset(%{
           round_stopped: true, 
           status: "verifying",
-          stopper_id: stopper_id
+          stopper_id: stopper_id,
+          player_answers: updated_player_answers
         })
         |> Repo.update()
         
@@ -249,30 +289,22 @@ defmodule Constellation.Games.GameState do
           Logger.debug("Categories for verification: #{inspect(state.current_categories)}")
           Logger.debug("Stopper ID for verification: #{inspect(state.stopper_id)}")
           
-          # Check if we have any player answers to verify
-          if player_answers == [] do
-            Logger.warning("No player answers found for verification in game #{game_id}, round #{state.current_round}")
-            # Create a mock result with empty data to allow the game to continue
-            mock_results = []
-            process_verification_results(game_id, mock_results)
-          else
-            # Verify answers using AI
-            Logger.info("Calling AI verifier with #{length(state.current_categories)} categories")
-            case AIVerifier.verify_round(
-              state.current_letter, 
-              state.current_categories, 
-              player_answers, 
-              state.stopper_id
-            ) do
-              {:ok, results} ->
-                Logger.info("AI verification successful, processing results")
-                # Process verification results
-                process_verification_results(game_id, results)
-                
-              {:error, reason} ->
-                Logger.error("AI verification failed: #{inspect(reason)}")
-                {:error, reason}
-            end
+          # Verify answers using AI
+          Logger.info("Calling AI verifier with #{length(state.current_categories)} categories")
+          case AIVerifier.verify_round(
+            state.current_letter, 
+            state.current_categories, 
+            player_answers, 
+            state.stopper_id
+          ) do
+            {:ok, results} ->
+              Logger.info("AI verification successful, processing results")
+              # Process verification results
+              process_verification_results(game_id, results)
+              
+            {:error, reason} ->
+              Logger.error("AI verification failed: #{inspect(reason)}")
+              {:error, reason}
           end
         end
     end
@@ -284,89 +316,111 @@ defmodule Constellation.Games.GameState do
   def process_verification_results(game_id, results) do
     # Get the current game state to get round number and letter
     state = get_game_state(game_id)
-    
+
     Logger.info("Processing verification results for game #{game_id}, round #{state.current_round}, letter #{state.current_letter}")
-    Logger.info("Received #{length(results)} player results to process")
-    
-    # Process each player's results
-    Enum.each(results, fn player_result ->
-      player_id = player_result["player_id"]
-      Logger.info("Processing results for player #{player_id}")
+    Logger.info("Received #{length(results)} player results sets from AI Verifier")
+
+    # Fetch all players associated with this game
+    all_players = Constellation.Games.Player.list_players_for_game(game_id)
+    # Create a map of session_id -> player for efficient lookup
+    player_map = Enum.into(all_players, %{}, fn player -> {player.session_id, player} end)
+    Logger.info("Found #{map_size(player_map)} players associated with game #{game_id}")
+    Logger.debug("Player map: #{inspect(player_map, pretty: true)}")
+
+    # Convert results list to a map keyed by player_id for efficient lookup
+    results_map = Enum.into(results, %{}, fn result -> 
+      player_id = result["player_id"]
+      Logger.debug("Processing result for player_id: #{player_id}")
+      {player_id, result} 
+    end)
+    Logger.debug("Results map keys: #{inspect(Map.keys(results_map))}")
+
+    # Ensure all players have entries processed
+    Enum.each(player_map, fn {session_id, player} ->
+      # Try to find results for this player by session_id or numeric ID
+      player_result = Map.get(results_map, session_id) || 
+                      Map.get(results_map, "#{player.id}") ||
+                      Map.get(results_map, player.id)
       
-      # Process each category result
-      Enum.each(player_result["category_results"], fn category_result ->
-        category = category_result["category"]
-        answer = category_result["answer"]
-        is_valid = category_result["is_valid"]
-        points = category_result["points"]
-        
-        Logger.debug("Processing category #{category}, answer: #{answer}, valid: #{is_valid}, points: #{points}")
-        
-        # Generate explanation text
-        explanation = generate_explanation(category_result, player_result["is_stopper"], player_result["stopper_bonus"])
-        
-        # Find the existing round entry
-        query = from re in Constellation.Games.RoundEntry,
-          where: re.game_id == ^game_id and
-                 re.player_id == ^player_id and
-                 re.round_number == ^state.current_round and
-                 re.category == ^category
-        
-        case Repo.one(query) do
-          nil -> 
-            # If no entry exists (shouldn't happen), create one
-            Logger.warning("No round entry found for player #{player_id}, round #{state.current_round}, category #{category}")
+      Logger.debug("Looking for results for player #{player.name}: session_id=#{session_id}, id=#{player.id}, found=#{player_result != nil}")
+      
+      case player_result do
+        nil ->
+          # Player has no results from AI Verifier - ensure zero-score entries
+          Logger.warning("Player #{player.name} (#{session_id}) has no results from AI Verifier. Ensuring zero-score entries.")
+          ensure_zero_entries_for_player(game_id, player.id, state)
+
+        player_result ->
+          # Player has results, process them
+          Logger.info("Processing results for player #{player.name} (#{session_id})")
+          # Log the full player result for debugging
+          Logger.debug("Full player result: #{inspect(player_result)}")
           
-          entry ->
-            # Update the entry with verification results
-            Logger.info("Updating entry ID #{entry.id} for player #{player_id}, category #{category}")
-            
-            changeset = Constellation.Games.RoundEntry.changeset(entry, %{
+          # Check if all answers are valid
+          all_valid = Enum.all?(player_result["category_results"], fn result -> result["is_valid"] end)
+          Logger.info("Player #{player.name}: All answers valid? #{all_valid}")
+
+          # Process each category result
+          Enum.each(player_result["category_results"], fn category_result ->
+            category = category_result["category"]
+            answer = category_result["answer"]
+            is_valid = category_result["is_valid"]
+            points = category_result["points"]
+
+            Logger.debug("Player #{player.name} - Processing category #{category}, answer: #{answer}, valid: #{is_valid}, points: #{points}")
+
+            # Generate explanation text
+            explanation = generate_explanation(category_result, player_result["is_stopper"], player_result["stopper_bonus"])
+
+            # Upsert the round entry (create if not exists, update if exists)
+            upsert_round_entry(game_id, player.id, state, category, %{
+              answer: answer || "",
               score: points,
               verification_status: "completed",
               is_valid: is_valid,
               ai_explanation: explanation
             })
-            
-            case Repo.update(changeset) do
-              {:ok, updated_entry} ->
-                Logger.info("Successfully updated entry ID #{updated_entry.id}: status=#{updated_entry.verification_status}, valid=#{updated_entry.is_valid}, score=#{updated_entry.score}")
-              
+          end) # End category_results loop
+
+          # Add stopper bonus if applicable
+          is_stopper = player_result["is_stopper"]
+          stopper_bonus = player_result["stopper_bonus"] || 0 # Default bonus to 0 if nil
+
+          Logger.info("Player #{player.name}: Checking stopper bonus. is_stopper=#{is_stopper}, all_answers_valid=#{all_valid}, stopper_bonus=#{stopper_bonus}")
+
+          if is_stopper && stopper_bonus > 0 do
+            Logger.info("Adding stopper bonus of #{stopper_bonus} points for player #{player.name}")
+
+            # Create a special entry for the stopper bonus
+            case RoundEntry.create_entry(%{
+              player_id: player.id,
+              game_id: game_id,
+              round_number: state.current_round,
+              letter: state.current_letter,
+              category: "STOPPER_BONUS",
+              answer: "Stopped the round with all valid answers",
+              score: stopper_bonus,
+              verification_status: "completed",
+              is_valid: true,
+              ai_explanation: "Bonus points for stopping the round with all valid answers"
+            }) do
+              {:ok, bonus_entry} ->
+                Logger.info("Successfully created stopper bonus entry ID #{bonus_entry.id} for player #{player.name}")
+
               {:error, failed_changeset} ->
-                Logger.error("Failed to update entry: #{inspect(failed_changeset.errors)}")
+                Logger.error("Failed to create stopper bonus entry for player #{player.name}: #{inspect(failed_changeset.errors)}")
             end
-        end
-      end)
-      
-      # Add stopper bonus if applicable
-      if player_result["is_stopper"] && player_result["stopper_bonus"] > 0 do
-        Logger.info("Adding stopper bonus of #{player_result["stopper_bonus"]} points for player #{player_id}")
-        
-        # Create a special entry for the stopper bonus
-        case Constellation.Games.RoundEntry.create_entry(%{
-          player_id: player_id,
-          game_id: game_id,
-          round_number: state.current_round,
-          letter: state.current_letter,
-          category: "STOPPER_BONUS",
-          answer: "Stopped the round with all valid answers",
-          score: player_result["stopper_bonus"],
-          verification_status: "completed",
-          is_valid: true,
-          ai_explanation: "Bonus points for stopping the round with all valid answers"
-        }) do
-          {:ok, bonus_entry} ->
-            Logger.info("Successfully created stopper bonus entry ID #{bonus_entry.id}")
-          
-          {:error, failed_changeset} ->
-            Logger.error("Failed to create stopper bonus entry: #{inspect(failed_changeset.errors)}")
-        end
-      end
-    end)
-    
+          else
+            if is_stopper do
+              Logger.info("Player #{player.name} is stopper, but bonus is not positive (#{stopper_bonus}). No bonus entry created.")
+            end
+          end
+      end # End case Map.get
+    end) # End player_ids loop
+
     # Update game state to indicate verification is complete
     Logger.info("Updating game state to completed_verification for game #{game_id}")
-    
+
     result = state
       |> changeset(%{status: "completed_verification"})
       |> Repo.update()
@@ -374,7 +428,7 @@ defmodule Constellation.Games.GameState do
     case result do
       {:ok, updated_state} ->
         Logger.info("Successfully updated game state to #{updated_state.status}")
-        
+
         # Broadcast round update with verification results
         Phoenix.PubSub.broadcast(
           Constellation.PubSub,
@@ -387,7 +441,7 @@ defmodule Constellation.Games.GameState do
             results: results
           }}
         )
-        
+
         {:ok, results}
       
       {:error, failed_changeset} ->
@@ -395,7 +449,63 @@ defmodule Constellation.Games.GameState do
         {:error, :failed_to_update_game_state}
     end
   end
-  
+
+  # Helper function to ensure zero-score entries exist for a player who didn't get results
+  defp ensure_zero_entries_for_player(game_id, player_id, state) do
+    Logger.info("Ensuring zero-score entries for player #{player_id}, round #{state.current_round}")
+    Enum.each(state.current_categories, fn category ->
+      upsert_round_entry(game_id, player_id, state, category, %{
+        answer: "",
+        score: 0,
+        verification_status: "completed",
+        is_valid: false,
+        ai_explanation: "No answer submitted or processed for this category."
+      })
+    end)
+  end
+
+  # Helper function to find or create a round entry and update it
+  defp upsert_round_entry(game_id, player_id, state, category, data) do
+    query = from re in RoundEntry,
+      where: re.game_id == ^game_id and
+             re.player_id == ^player_id and
+             re.round_number == ^state.current_round and
+             re.category == ^category
+
+    case Repo.one(query) do
+      nil ->
+        # Entry doesn't exist, create it
+        Logger.warning("No round entry found for player #{player_id}, round #{state.current_round}, category #{category}. Creating one.")
+        entry_data = Map.merge(%{
+          player_id: player_id,
+          game_id: game_id,
+          round_number: state.current_round,
+          letter: state.current_letter,
+          category: category
+        }, data)
+
+        case RoundEntry.create_entry(entry_data) do
+          {:ok, new_entry} ->
+            Logger.info("Created missing round entry ID #{new_entry.id} for player #{player_id}, category #{category} with score #{data[:score]}")
+          {:error, err} ->
+            Logger.error("Failed to create missing round entry for player #{player_id}, category #{category}: #{inspect(err)}")
+        end
+
+      entry ->
+        # Entry exists, update it
+        Logger.info("Updating entry ID #{entry.id} for player #{player_id}, category #{category} with score #{data[:score]}")
+        changeset = RoundEntry.changeset(entry, data)
+
+        case Repo.update(changeset) do
+          {:ok, updated_entry} ->
+            Logger.info("Successfully updated entry ID #{updated_entry.id}: status=#{updated_entry.verification_status}, valid=#{updated_entry.is_valid}, score=#{updated_entry.score}")
+
+          {:error, failed_changeset} ->
+            Logger.error("Failed to update entry ID #{entry.id} for player #{player_id}, category #{category}: #{inspect(failed_changeset.errors)}")
+        end
+    end
+  end
+
   # Generate explanation text for a category result
   defp generate_explanation(category_result, _is_stopper, _stopper_bonus) do
     category = category_result["category"]

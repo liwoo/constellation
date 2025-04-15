@@ -43,13 +43,20 @@ defmodule Constellation.Games.RoundEntry do
   def create_entries_for_round(player_id, game_id, round_number, letter, answers) do
     # Convert the answers map to a list of entries
     entries = Enum.map(answers, fn {category, answer} ->
+      # Convert empty answers to "<blank>" for consistent handling
+      formatted_answer = case answer do
+        nil -> "<blank>"
+        "" -> "<blank>"
+        _ -> answer
+      end
+
       %{
         player_id: player_id,
         game_id: game_id,
         round_number: round_number,
         letter: letter,
         category: to_string(category),
-        answer: answer,
+        answer: formatted_answer,
         score: 0 # Initial score, will be updated after scoring
       }
     end)

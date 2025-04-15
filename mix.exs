@@ -45,6 +45,8 @@ defmodule Constellation.MixProject do
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
       {:httpoison, "~> 2.0"},
+      {:tesla, "~> 1.5"},
+      {:hackney, "~> 1.18"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",

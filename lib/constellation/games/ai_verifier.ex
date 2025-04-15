@@ -3,6 +3,7 @@ defmodule Constellation.Games.AIVerifier do
   Handles verification of game rounds using Gemini AI.
   """
   require Logger
+  alias Constellation.API.GeminiClient
 
   @doc """
   Verifies a round's answers using Gemini AI.
@@ -21,9 +22,9 @@ defmodule Constellation.Games.AIVerifier do
     # Prepare payload for Gemini
     payload = build_verification_payload(letter, categories, player_answers, stopper_id)
     
-    # Call Gemini API
+    # Call Gemini API using the new client
     case call_gemini_api(payload) do
-      {:ok, response} -> parse_gemini_response(response)
+      {:ok, response} -> {:ok, response}
       {:error, _} = error -> error
     end
   end
@@ -57,110 +58,28 @@ defmodule Constellation.Games.AIVerifier do
       Logger.warning("GEMINI_API_KEY not set, using mock verification")
       mock_gemini_verification(payload)
     else
-      # Prepare the Gemini API request
-      url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=#{api_key}"
       Logger.info("Calling Gemini API with payload for letter: #{payload["letter"]}")
       
-      # Build the prompt for Gemini
-      prompt = """
-      You are an AI judge for a word game called "Constellation". In this game, players provide answers for different categories that start with a specific letter.
-
-      Here are the rules:
-      1. All answers must start with the letter "#{payload["letter"]}".
-      2. Answers are scored as follows:
-         - Unique valid answer: #{payload["scoring_rules"]["unique_valid"]} points
-         - Non-unique valid answer: #{payload["scoring_rules"]["non_unique_valid"]} point
-         - Invalid answer: #{payload["scoring_rules"]["invalid"]} points
-         - Bonus for stopping the round with all valid answers: #{payload["scoring_rules"]["stopper_bonus_if_all_valid"]} points
-
-      Please verify and score the following answers:
-
-      Categories: #{Enum.join(payload["categories"], ", ")}
-      Letter: #{payload["letter"]}
-
-      Player Answers:
-      #{format_player_answers_for_prompt(payload["player_answers"], payload["categories"])}
-
-      The player with ID "#{payload["stopper_player_id"]}" stopped the round.
-
-      Please provide your verification results in the following JSON format:
-      [
-        {
-          "player_id": "player_session_id",
-          "name": "player_name",
-          "category_results": [
-            {
-              "category": "category_name",
-              "answer": "player_answer",
-              "is_valid": true/false,
-              "is_unique": true/false,
-              "points": score_value
-            },
-            ...
-          ],
-          "base_points": total_base_points,
-          "is_stopper": true/false,
-          "stopper_bonus": bonus_points,
-          "total_points": total_points_with_bonus
-        },
-        ...
-      ]
-      
-      Return ONLY the JSON with no additional text.
-      """
-      
-      # Prepare the request body
-      request_body = %{
-        "contents" => [
-          %{
-            "parts" => [
-              %{
-                "text" => prompt
-              }
-            ]
-          }
-        ]
-      }
-      
-      # Make the HTTP request
-      Logger.debug("Sending request to Gemini API")
-      case HTTPoison.post(url, Jason.encode!(request_body), [{"Content-Type", "application/json"}]) do
-        {:ok, response} when is_map(response) and response.status_code == 200 ->
-          # Parse the response
-          Logger.info("Received 200 OK response from Gemini API")
-          case Jason.decode(response.body) do
-            {:ok, response_data} ->
-              # Extract the generated text from the response
-              Logger.debug("Successfully decoded response JSON")
-              case get_in(response_data, ["candidates", Access.at(0), "content", "parts", Access.at(0), "text"]) do
-                nil ->
-                  Logger.error("Failed to extract text from Gemini API response: #{inspect(response_data)}")
-                  {:error, :invalid_response_format}
-                
-                text ->
-                  # Parse the JSON from the text
-                  Logger.debug("Extracted text from Gemini response, parsing as JSON")
-                  case Jason.decode(text) do
-                    {:ok, verification_results} ->
-                      Logger.info("Successfully parsed verification results: #{length(verification_results)} player results")
-                      {:ok, verification_results}
-                    
-                    {:error, reason} ->
-                      Logger.error("Failed to parse verification results: #{inspect(reason)}")
-                      Logger.error("Raw text received: #{inspect(text)}")
-                      mock_gemini_verification(payload)
-                  end
-              end
-            
-            {:error, reason} ->
-              Logger.error("Failed to parse Gemini API response: #{inspect(reason)}")
-              mock_gemini_verification(payload)
-          end
-        
-        {:ok, response} when is_map(response) ->
-          Logger.error("Gemini API returned status code #{response.status_code}: #{response.body}")
+      # Use the new GeminiClient to verify the round
+      case GeminiClient.verify_round(
+        payload["letter"],
+        payload["categories"],
+        payload["player_answers"],
+        payload["stopper_player_id"],
+        api_key
+      ) do
+        {:ok, verification_results} ->
+          Logger.info("Successfully received verification results: #{length(verification_results)} player results")
+          {:ok, verification_results}
+          
+        {:error, :invalid_json} ->
+          Logger.error("Failed to parse JSON from Gemini API response")
           mock_gemini_verification(payload)
-        
+          
+        {:error, {status, body}} ->
+          Logger.error("Gemini API returned error status #{status}: #{inspect(body)}")
+          mock_gemini_verification(payload)
+          
         {:error, reason} ->
           Logger.error("Failed to call Gemini API: #{inspect(reason)}")
           mock_gemini_verification(payload)

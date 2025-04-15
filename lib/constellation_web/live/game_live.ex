@@ -81,6 +81,7 @@ defmodule ConstellationWeb.GameLive do
           Map.put(acc, key, value) 
         end)
       
+      # Then create entries in the round_entries table
       RoundEntry.create_entries_for_round(
         current_player.id, 
         game_id, 
@@ -365,49 +366,54 @@ defmodule ConstellationWeb.GameLive do
         )
         
         Logger.info("Found #{length(round_entries)} entries for round #{game_state.current_round}")
-        
-        if Enum.empty?(round_entries) do
-          Logger.warning("No round entries found for game #{game_id}, round #{game_state.current_round}")
-          []
-        else
-          # Group entries by player
-          entries_by_player = Enum.group_by(round_entries, fn entry -> entry.player_id end)
-          
-          # Get players for the game
-          players = Constellation.Games.Player.list_players_for_game(game_id)
-          
-          # Transform entries into player scores
-          player_scores = entries_by_player
-          |> Enum.map(fn {player_id, entries} ->
-            # Find player info
-            player = Enum.find(players, fn p -> p.id == player_id end)
-            player_name = if player, do: player.name, else: "Unknown Player"
-            
-            # Calculate total score for this player
-            total_score = Enum.reduce(entries, 0, fn entry, acc -> 
-              acc + (entry.score || 0)
-            end)
-            
-            # Get valid answers
-            valid_answers = entries
-            |> Enum.filter(fn entry -> entry.is_valid end)
-            |> Enum.map(fn entry -> 
-              "#{entry.category}: #{entry.answer} (#{entry.score} points)" 
-            end)
-            
-            # Create player score entry
-            %{
-              player_id: player_id,
-              name: player_name,
-              score: total_score,
-              verified_answers: valid_answers
-            }
-          end)
-          |> Enum.sort_by(fn entry -> entry.score end, :desc) # Sort by score descending
-          
-          Logger.info("Calculated scores for #{length(player_scores)} players")
-          player_scores
+        # Log the first few entries for debugging
+        if length(round_entries) > 0 do
+          sample_entries = Enum.take(round_entries, min(3, length(round_entries)))
+          Logger.debug("Sample entries: #{inspect(sample_entries, pretty: true)}")
         end
+        
+        # Get players for the game
+        players = Constellation.Games.Player.list_players_for_game(game_id)
+        Logger.info("Found #{length(players)} players for game #{game_id}")
+        Logger.debug("Players: #{inspect(players, pretty: true)}")
+        
+        # Group entries by player
+        entries_by_player = Enum.group_by(round_entries, fn entry -> entry.player_id end)
+        Logger.debug("Entries by player: #{inspect(Map.keys(entries_by_player))}")
+        
+        # Transform entries into player scores, ensuring ALL players are included
+        player_scores = players
+        |> Enum.map(fn player ->
+          # Get entries for this player (or empty list if none)
+          entries = Map.get(entries_by_player, player.id, [])
+          Logger.debug("Player #{player.name} (#{player.id}) has #{length(entries)} entries")
+          
+          # Calculate total score for this player
+          total_score = Enum.reduce(entries, 0, fn entry, acc -> 
+            Logger.debug("Entry score for #{player.name}: #{entry.category} = #{entry.score || 0}")
+            acc + (entry.score || 0)
+          end)
+          
+          # Get valid answers
+          valid_answers = entries
+          |> Enum.filter(fn entry -> entry.is_valid end)
+          |> Enum.map(fn entry -> 
+            "#{entry.category}: #{entry.answer} (#{entry.score} points)" 
+          end)
+          
+          # Create player score entry
+          %{
+            player_id: player.id,
+            name: player.name,
+            score: total_score,
+            verified_answers: valid_answers
+          }
+        end)
+        |> Enum.sort_by(fn entry -> entry.score end, :desc) # Sort by score descending
+        
+        Logger.info("Calculated scores for #{length(player_scores)} players")
+        Logger.info("Calculated scores: #{inspect(player_scores)}")
+        player_scores
       else
         reason = if game_state, do: "verification not completed", else: "game state not found"
         Logger.info("Game #{game_id} scores not available: #{reason}")
