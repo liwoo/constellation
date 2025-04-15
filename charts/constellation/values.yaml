@@ -95,12 +95,11 @@ config:
 
 # Database configuration
 database:
-  host: "database-host" # Replace with your actual database host
+  host: "pg-postgresql-pg-postgresql.data.svc.cluster.local" # Default database host
   port: "5432"
-  name: "database-name" # Replace with your actual database name
+  name: "constellation" # Default database name
+  username: "postgres" # Default database username
+  password: "postgrespw" # Default database password (should be overridden)
   ssl: "false"
-  secretName: "database-secret" # Secret containing database credentials
-  secretUserKey: "user" # Key in the secret containing the database username
-  secretPasswordKey: "password" # Key in the secret containing the database password
   poolMin: "0" # Adjust this based on your needs
   poolMax: "10" # Adjust this based on your needs

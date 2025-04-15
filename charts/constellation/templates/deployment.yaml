@@ -45,17 +45,17 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: DATABASE_HOST
-              value: "pg-postgresql-pg-postgresql.data.svc.cluster.local"
+              value: {{ .Values.database.host | quote }}
             - name: DATABASE_PORT
-              value: "5432"
+              value: {{ .Values.database.port | quote }}
             - name: DATABASE_NAME
               value: {{ .Values.database.name | quote }}
             - name: DATABASE_SSL
               value: {{ .Values.database.ssl | quote }}
             - name: DATABASE_USERNAME
-              value: "postgres"
+              value: {{ .Values.database.username | quote }}
             - name: DATABASE_PASSWORD
-              value: "postgrespw"
+              value: {{ .Values.database.password | quote }}
             - name: DATABASE_POOL_MIN
               value: {{ .Values.database.poolMin | quote }}
             - name: DATABASE_POOL_MAX
@@ -71,7 +71,7 @@ spec:
                   name: {{ .Values.config.geminiApiKeySecretName }}
                   key: {{ .Values.config.geminiApiKeySecretKey }}
             - name: PHX_HOST
-              value: "games.kwathu.ai"
+              value: {{ (index .Values.ingress.hosts 0).host | quote }}
             - name: PORT
               value: {{ .Values.service.targetPort | quote }}
             - name: PHX_SERVER
