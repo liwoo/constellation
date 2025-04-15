@@ -1,0 +1,64 @@
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+
+  <div class="container mx-auto px-4 py-8 max-w-6xl relative z-10">
+    <h1 class="text-3xl font-bold text-center mb-8 font-game text-purple-500">Global Leaderboard</h1>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">Top Players</h2>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-700">
+          <thead>
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Rank</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Player</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Score</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Games Played</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Avg. Score/Game</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700">
+            <%= for {player, index} <- Enum.with_index(@top_players) do %>
+              <tr class="hover:bg-gray-700/50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white"><%= index + 1 %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-200"><%= player.name %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-200"><%= player.total_score %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-200"><%= player.games_played %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+                  <%= 
+                    avg = player.avg_score
+                    cond do
+                      is_float(avg) -> Float.round(avg, 1)
+                      true -> avg
+                    end
+                  %>
+                </td>
+              </tr>
+            <% end %>
+            
+            <%= if Enum.empty?(@top_players) do %>
+              <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-400">No player data available yet</td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="mt-8 text-center">
+      <a href="/" class="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors mr-4">
+        Back to Home
+      </a>
+      <a href="/rules" class="inline-block px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-colors">
+        Game Rules
+      </a>
+    </div>
+  </div>
+</div>

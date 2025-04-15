@@ -205,4 +205,26 @@ defmodule Constellation.Games.RoundEntry do
       entry -> entry.letter
     end
   end
+  
+  @doc """
+  Calculate the total score for a player across all games
+  """
+  def calculate_player_total_score(player_id) do
+    from(e in __MODULE__,
+      where: e.player_id == ^player_id,
+      select: sum(e.score)
+    )
+    |> Repo.one() || 0
+  end
+  
+  @doc """
+  Count the number of games a player has participated in
+  """
+  def count_games_played(player_id) do
+    from(e in __MODULE__,
+      where: e.player_id == ^player_id,
+      select: count(fragment("DISTINCT ?", e.game_id))
+    )
+    |> Repo.one() || 0
+  end
 end

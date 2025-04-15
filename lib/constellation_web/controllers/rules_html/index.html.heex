@@ -1,0 +1,74 @@
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Animated stars background -->
+  <div class="stars-container absolute inset-0 overflow-hidden opacity-50">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+  </div>
+
+  <div class="max-w-4xl mx-auto px-4 py-8 relative z-10">
+    <h1 class="text-3xl font-bold text-center mb-8 font-game text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Constellation Game Rules</h1>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 mb-8">
+      <h2 class="text-2xl font-bold mb-4 text-purple-400">Game Overview</h2>
+      <p class="mb-4">Constellation is a word game where players provide answers for different categories that start with a specific letter. The game is played in rounds, with each round using a different letter.</p>
+      
+      <h3 class="text-xl font-semibold mb-2 text-purple-300">Basic Gameplay</h3>
+      <ol class="list-decimal pl-6 mb-6 space-y-2">
+        <li>Each round has a randomly selected letter and 5 categories.</li>
+        <li>Players must provide answers for each category that start with the round's letter.</li>
+        <li>Any player can stop the round at any time by clicking the "Stop" button.</li>
+        <li>After a round is stopped, all answers are verified and scored.</li>
+        <li>The game continues for multiple rounds, with scores accumulating across rounds.</li>
+      </ol>
+    </div>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 mb-8">
+      <h2 class="text-2xl font-bold mb-4 text-purple-400">Scoring Rules</h2>
+      
+      <h3 class="text-xl font-semibold mb-2 text-purple-300">Answer Scoring</h3>
+      <ul class="list-disc pl-6 mb-6 space-y-2">
+        <li><span class="font-bold text-green-400">2 points</span> for a unique valid answer (no other player gave the same answer)</li>
+        <li><span class="font-bold text-green-400">1 point</span> for a non-unique valid answer (other players gave the same answer)</li>
+        <li><span class="font-bold text-red-400">0 points</span> for invalid answers or blank entries</li>
+      </ul>
+      
+      <h3 class="text-xl font-semibold mb-2 text-purple-300">Stopper Bonus/Penalty</h3>
+      <ul class="list-disc pl-6 mb-6 space-y-2">
+        <li><span class="font-bold text-green-400">+2 bonus points</span> for the player who stops the round if ALL their answers are valid</li>
+        <li><span class="font-bold">No bonus or penalty</span> for the stopper if SOME of their answers are valid</li>
+        <li><span class="font-bold text-red-400">-2 penalty points</span> for the stopper if NONE of their answers are valid</li>
+      </ul>
+    </div>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 mb-8">
+      <h2 class="text-2xl font-bold mb-4 text-purple-400">Answer Validation</h2>
+      
+      <h3 class="text-xl font-semibold mb-2 text-purple-300">Valid Answers Must:</h3>
+      <ul class="list-disc pl-6 mb-6 space-y-2">
+        <li>Start with the round's letter</li>
+        <li>Be a real, existing thing in the given category</li>
+        <li>Be correctly spelled (with minor typos allowed)</li>
+        <li>Be appropriate for the category</li>
+      </ul>
+      
+      <p class="italic text-gray-300">Note: Answer validation is performed automatically using AI to ensure fair and consistent judging.</p>
+    </div>
+    
+    <div class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30">
+      <h2 class="text-2xl font-bold mb-4 text-purple-400">Tips for Success</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>Try to think of unique answers that other players might not come up with</li>
+        <li>Fill in all categories before stopping the round to maximize your points</li>
+        <li>Only stop the round if you're confident your answers are valid</li>
+        <li>Keep an eye on the leaderboard to track your progress</li>
+      </ul>
+    </div>
+    
+    <div class="mt-8 text-center">
+      <a href="/" class="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors">
+        Back to Home
+      </a>
+    </div>
+  </div>
+</div>

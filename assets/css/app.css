@@ -40,3 +40,65 @@ h1, h2, h3, h4, h5, h6 {
 #leaderboard .text-gray-300 {
   color: white !important;
 }
+
+/* Stars animation for background */
+.stars-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.stars, .stars2, .stars3 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: stars-animation 8s linear infinite;
+  opacity: 0.3;
+}
+
+.stars2 {
+  background-image: 
+    radial-gradient(2px 2px at 100px 50px, #eee, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 200px 150px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 300px 250px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 400px 350px, #ddd, rgba(0,0,0,0));
+  background-size: 400px 400px;
+  animation: stars-animation 30s linear infinite;
+}
+
+.stars3 {
+  background-image: 
+    radial-gradient(1px 1px at 50px 80px, #eee, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 150px 180px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 250px 280px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 350px 380px, #ddd, rgba(0,0,0,0));
+  background-size: 300px 300px;
+  animation: stars-animation 50s linear infinite;
+}
+
+@keyframes stars-animation {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-200px);
+  }
+}
+
+/* Font class for game styling */
+.font-game {
+  font-family: 'Press Start 2P', cursive;
+}

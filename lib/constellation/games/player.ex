@@ -47,11 +47,21 @@ defmodule Constellation.Games.Player do
     )
   end
 
+  @doc """
+  Count the number of players in a game
+  """
   def count_players_in_game(game_id) do
-    Constellation.Repo.one(
-      from p in Constellation.Games.Player,
+    from(p in __MODULE__,
       where: p.game_id == ^game_id,
       select: count(p.id)
     )
+    |> Constellation.Repo.one() || 0
+  end
+
+  @doc """
+  List all players
+  """
+  def list_players do
+    Constellation.Repo.all(__MODULE__)
   end
 end

@@ -25,6 +25,11 @@ defmodule ConstellationWeb.Router do
     post "/games/join", GameController, :join
     post "/games/:id/start", GameController, :start
     live "/games/:id/play", GameLive
+    
+    # Rules and leaderboard routes
+    get "/rules", RulesController, :index
+    get "/leaderboard", LeaderboardController, :index
+    get "/leaderboard/:game_id", LeaderboardController, :show
   end
 
   # Other scopes may use custom stacks.

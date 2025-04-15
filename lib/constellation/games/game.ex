@@ -43,6 +43,13 @@ defmodule Constellation.Games.Game do
     |> Enum.join("")
   end
 
+  @doc """
+  Get a game by ID (returns nil if not found)
+  """
+  def get_game(id) do
+    Constellation.Repo.get(__MODULE__, id)
+  end
+
   def get_game!(id), do: Constellation.Repo.get!(Constellation.Games.Game, id)
 
   def get_game_by_code(code) do
@@ -67,6 +74,14 @@ defmodule Constellation.Games.Game do
 
   def list_waiting_games do
     Constellation.Repo.all(from g in Constellation.Games.Game, where: g.status == :waiting)
+  end
+
+  def list_recent_games(limit \\ 10) do
+    from(g in __MODULE__,
+      order_by: [desc: g.inserted_at],
+      limit: ^limit
+    )
+    |> Constellation.Repo.all()
   end
 
   def can_start_game?(game_id) do
