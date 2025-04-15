@@ -460,11 +460,28 @@ defmodule ConstellationWeb.GameLive do
           entries = Map.get(entries_by_player, player.id, [])
           Logger.debug("Player #{player.name} (#{player.id}) has #{length(entries)} entries")
           
-          # Calculate total score for this player
-          total_score = Enum.reduce(entries, 0, fn entry, acc -> 
-            Logger.debug("Entry score for #{player.name}: #{entry.category} = #{entry.score || 0}")
-            acc + (entry.score || 0)
+          # Separate regular entries from bonus entries
+          {regular_entries, bonus_entries} = Enum.split_with(entries, fn entry -> 
+            entry.category != "STOPPER_BONUS"
           end)
+          
+          # Calculate score from regular entries
+          regular_score = Enum.reduce(regular_entries, 0, fn entry, acc -> 
+            score_value = entry.score || 0
+            Logger.debug("Regular entry score for #{player.name}: #{entry.category} = #{score_value}")
+            acc + score_value
+          end)
+          
+          # Calculate bonus/penalty from stopper entries
+          stopper_bonus = Enum.reduce(bonus_entries, 0, fn entry, acc ->
+            bonus_value = entry.score || 0
+            Logger.debug("Stopper bonus for #{player.name}: #{bonus_value}")
+            acc + bonus_value
+          end)
+          
+          # Calculate total score
+          total_score = regular_score + stopper_bonus
+          Logger.debug("Total score for #{player.name}: regular=#{regular_score}, bonus=#{stopper_bonus}, total=#{total_score}")
           
           # Get all answers with their verification status and scores
           all_answers = entries
@@ -490,8 +507,7 @@ defmodule ConstellationWeb.GameLive do
           end)
           
           # Check if player has a stopper bonus
-          stopper_bonus = entries
-          |> Enum.find(fn entry -> entry.category == "STOPPER_BONUS" end)
+          stopper_bonus_entry = Enum.find(entries, fn entry -> entry.category == "STOPPER_BONUS" end)
           
           # Create player score entry
           %{
@@ -499,7 +515,7 @@ defmodule ConstellationWeb.GameLive do
             name: player.name,
             score: total_score,
             verified_answers: all_answers,
-            stopper_bonus: if(stopper_bonus, do: stopper_bonus.score, else: 0)
+            stopper_bonus: if(stopper_bonus_entry, do: stopper_bonus_entry.score, else: 0)
           }
         end)
         |> Enum.sort_by(fn entry -> entry.score end, :desc) # Sort by score descending

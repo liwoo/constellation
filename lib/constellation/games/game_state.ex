@@ -357,8 +357,9 @@ defmodule Constellation.Games.GameState do
           Logger.debug("Full player result: #{inspect(player_result)}")
           
           # Check if all answers are valid
-          all_valid = Enum.all?(player_result["category_results"], fn result -> result["is_valid"] end)
-          Logger.info("Player #{player.name}: All answers valid? #{all_valid}")
+          has_valid_answers = Enum.any?(player_result["category_results"], & &1["is_valid"])
+          all_valid? = Enum.all?(player_result["category_results"], & &1["is_valid"])
+          Logger.info("Player #{player.name}: Has valid answers?: #{has_valid_answers}, All valid?: #{all_valid?}")
 
           # Process each category result
           Enum.each(player_result["category_results"], fn category_result ->
@@ -387,22 +388,28 @@ defmodule Constellation.Games.GameState do
           is_stopper? = player.session_id == state.stopper_id
           
           if is_stopper? do
-            all_valid? = Enum.all?(player_result["category_results"], & &1["is_valid"])
-            
-            Logger.info("Player #{player.name} is stopper. All valid?: #{all_valid?}")
-            
-            entry_params = if all_valid? do
-              %{
-                answer: "Stopped round with all valid answers",
-                score: 2,
-                ai_explanation: "+2 bonus for valid stop"
-              }
-            else
-              %{
-                answer: "Stopped round with invalid answers",
-                score: -2,
-                ai_explanation: "-2 penalty for invalid stop"
-              }
+            entry_params = cond do
+              # All answers are valid - give full bonus
+              all_valid? -> 
+                %{
+                  answer: "Stopped round with all valid answers",
+                  score: 2,
+                  ai_explanation: "+2 bonus for valid stop with all valid answers"
+                }
+              # At least one valid answer - no bonus or penalty
+              has_valid_answers -> 
+                %{
+                  answer: "Stopped round with some valid answers",
+                  score: 0,
+                  ai_explanation: "No bonus or penalty - some answers were valid"
+                }
+              # No valid answers - apply penalty
+              true -> 
+                %{
+                  answer: "Stopped round with no valid answers",
+                  score: -2,
+                  ai_explanation: "-2 penalty for stopping with no valid answers"
+                }
             end
             
             case RoundEntry.create_entry(Map.merge(%{
@@ -416,8 +423,8 @@ defmodule Constellation.Games.GameState do
             }, entry_params)) do
               {:ok, entry} -> 
                 Logger.info("Created stopper entry ID #{entry.id} with score #{entry_params.score}")
-              {:error, changeset} -> 
-                Logger.error("Failed to create stopper entry: #{inspect(changeset)}")
+              {:error, err} -> 
+                Logger.error("Failed to create stopper entry: #{inspect(err)}")
             end
           end
           # --- End Stopper Logic ---
