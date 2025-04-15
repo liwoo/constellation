@@ -109,45 +109,62 @@
         </svg>
         Join Existing Game
       </h2>
-      <form action="/games/join" method="post">
-        <input type="hidden" name="_csrf_token" value={get_csrf_token()}>
-        <div class="mb-4 relative">
-          <label for="player-name-join" class="block text-gray-300 mb-2">Enter Name</label>
-          <input 
-            type="text" 
-            id="player-name-join" 
-            name="player_name"
-            class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-            placeholder="Your name"
-            required
-          >
-          <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-            </svg>
-          </div>
+      <div class="mb-4 relative">
+        <label for="game-code" class="block text-gray-300 mb-2">Game Code</label>
+        <input 
+          type="text" 
+          id="game-code" 
+          class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+          placeholder="Enter game code"
+          required
+        >
+        <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
+          </svg>
         </div>
-        <div class="mb-4 relative">
-          <label for="game-code" class="block text-gray-300 mb-2">Game Code</label>
-          <input 
-            type="text" 
-            id="game-code" 
-            name="game_code"
-            class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-            placeholder="Enter game code"
-            required
-          >
-          <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
-            </svg>
-          </div>
+      </div>
+      <button id="continue-join-btn" class="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-medium py-3 px-4 rounded-md transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-[1.02]">
+        Continue
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Name Input Modal (hidden by default) -->
+<div id="name-input-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="bg-gray-800 text-white p-6 md:p-8 rounded-lg shadow-xl max-w-md w-11/12">
+    <h2 id="modal-title" class="text-2xl font-bold mb-4 text-center text-purple-400">Enter Your Name</h2>
+    <form id="join-game-complete-form" action="/games/join" method="post">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()}>
+      <input type="hidden" id="modal-game-code" name="game_code" value="">
+      
+      <div class="mb-6 relative">
+        <label for="player-name-join" class="block text-gray-300 mb-2">Your Name</label>
+        <input 
+          type="text" 
+          id="player-name-join" 
+          name="player_name"
+          class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+          placeholder="Enter your name"
+          required
+        >
+        <div class="absolute right-3 top-[38px] text-gray-400 pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+          </svg>
         </div>
-        <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-medium py-3 px-4 rounded-md transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transform hover:scale-[1.02]">
+      </div>
+      
+      <div class="flex space-x-4">
+        <button type="button" id="cancel-join-btn" class="w-1/2 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-md transition-all">
+          Cancel
+        </button>
+        <button type="submit" class="w-1/2 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-medium py-3 px-4 rounded-md transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]">
           Join Game
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -157,6 +174,11 @@
     const joinGameBtn = document.getElementById('join-game-btn');
     const newGameForm = document.getElementById('new-game-form');
     const joinGameForm = document.getElementById('join-game-form');
+    const continueJoinBtn = document.getElementById('continue-join-btn');
+    const nameInputModal = document.getElementById('name-input-modal');
+    const cancelJoinBtn = document.getElementById('cancel-join-btn');
+    const gameCodeInput = document.getElementById('game-code');
+    const modalGameCodeInput = document.getElementById('modal-game-code');
     
     newGameBtn.addEventListener('click', function() {
       newGameBtn.classList.add('bg-purple-600');
@@ -182,6 +204,44 @@
       
       joinGameForm.classList.remove('hidden');
       newGameForm.classList.add('hidden');
+    });
+    
+    // Continue button opens the name input modal
+    continueJoinBtn.addEventListener('click', function() {
+      const gameCode = gameCodeInput.value.trim();
+      if (gameCode) {
+        // Set the game code in the hidden input of the modal form
+        modalGameCodeInput.value = gameCode;
+        // Show the modal
+        nameInputModal.classList.remove('hidden');
+        nameInputModal.classList.add('flex');
+      } else {
+        // Highlight the input field if empty
+        gameCodeInput.classList.add('border-red-500');
+        gameCodeInput.classList.add('ring-1');
+        gameCodeInput.classList.add('ring-red-500');
+        
+        // Remove highlight after a delay
+        setTimeout(() => {
+          gameCodeInput.classList.remove('border-red-500');
+          gameCodeInput.classList.remove('ring-1');
+          gameCodeInput.classList.remove('ring-red-500');
+        }, 2000);
+      }
+    });
+    
+    // Cancel button closes the modal
+    cancelJoinBtn.addEventListener('click', function() {
+      nameInputModal.classList.add('hidden');
+      nameInputModal.classList.remove('flex');
+    });
+    
+    // Close modal when clicking outside
+    nameInputModal.addEventListener('click', function(e) {
+      if (e.target === nameInputModal) {
+        nameInputModal.classList.add('hidden');
+        nameInputModal.classList.remove('flex');
+      }
     });
     
     // Initialize with New Game selected
