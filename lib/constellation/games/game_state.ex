@@ -382,39 +382,45 @@ defmodule Constellation.Games.GameState do
             })
           end) # End category_results loop
 
-          # Add stopper bonus if applicable
-          is_stopper = player_result["is_stopper"]
-          stopper_bonus = player_result["stopper_bonus"] || 0 # Default bonus to 0 if nil
-
-          Logger.info("Player #{player.name}: Checking stopper bonus. is_stopper=#{is_stopper}, all_answers_valid=#{all_valid}, stopper_bonus=#{stopper_bonus}")
-
-          if is_stopper && stopper_bonus > 0 do
-            Logger.info("Adding stopper bonus of #{stopper_bonus} points for player #{player.name}")
-
-            # Create a special entry for the stopper bonus
-            case RoundEntry.create_entry(%{
+          # --- Stopper Bonus/Penalty Logic ---
+          # Check if THIS player is the stopper based on state.stopper_id
+          is_stopper? = player.session_id == state.stopper_id
+          
+          if is_stopper? do
+            all_valid? = Enum.all?(player_result["category_results"], & &1["is_valid"])
+            
+            Logger.info("Player #{player.name} is stopper. All valid?: #{all_valid?}")
+            
+            entry_params = if all_valid? do
+              %{
+                answer: "Stopped round with all valid answers",
+                score: 2,
+                ai_explanation: "+2 bonus for valid stop"
+              }
+            else
+              %{
+                answer: "Stopped round with invalid answers",
+                score: -2,
+                ai_explanation: "-2 penalty for invalid stop"
+              }
+            end
+            
+            case RoundEntry.create_entry(Map.merge(%{
               player_id: player.id,
               game_id: game_id,
               round_number: state.current_round,
               letter: state.current_letter,
               category: "STOPPER_BONUS",
-              answer: "Stopped the round with all valid answers",
-              score: stopper_bonus,
               verification_status: "completed",
-              is_valid: true,
-              ai_explanation: "Bonus points for stopping the round with all valid answers"
-            }) do
-              {:ok, bonus_entry} ->
-                Logger.info("Successfully created stopper bonus entry ID #{bonus_entry.id} for player #{player.name}")
-
-              {:error, failed_changeset} ->
-                Logger.error("Failed to create stopper bonus entry for player #{player.name}: #{inspect(failed_changeset.errors)}")
-            end
-          else
-            if is_stopper do
-              Logger.info("Player #{player.name} is stopper, but bonus is not positive (#{stopper_bonus}). No bonus entry created.")
+              is_valid: all_valid?
+            }, entry_params)) do
+              {:ok, entry} -> 
+                Logger.info("Created stopper entry ID #{entry.id} with score #{entry_params.score}")
+              {:error, changeset} -> 
+                Logger.error("Failed to create stopper entry: #{inspect(changeset)}")
             end
           end
+          # --- End Stopper Logic ---
       end # End case Map.get
     end) # End player_ids loop
 
