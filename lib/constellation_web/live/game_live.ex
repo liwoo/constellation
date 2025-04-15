@@ -296,15 +296,19 @@ defmodule ConstellationWeb.GameLive do
        |> assign(:form, to_form(%{}))  # Reset the form itself
 
      # If the game status is "in_progress", dismiss the scores modal and start the countdown
-     if data.status == "in_progress" do
-       socket = socket |> assign(:show_scores_modal, false)  # Dismiss the scores modal
+     socket = if data.status == "in_progress" do
        Process.send_after(self(), :start_countdown, 100)
+       assign(socket, :show_scores_modal, false)  # Dismiss the scores modal
+     else
+       socket
      end
 
      # If verification just completed, hide verification modal and show scores modal
-     if data.status == "completed_verification" do
+     socket = if data.status == "completed_verification" do
        Process.send_after(self(), :verification_complete, 500)
-       Logger.info("Verification completed, will show scores modal")
+       socket
+     else
+       socket
      end
 
      {:noreply, socket}

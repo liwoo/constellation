@@ -16,7 +16,7 @@
       <!-- Game board -->
       <div class="relative bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30">
         <!-- Hamburger menu button (positioned inside card) -->
-        <button id="sidebar-toggle" class="absolute top-6 right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg">
+        <button phx-click="toggle_sidebar" class="absolute top-6 right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg hover:bg-purple-700 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
@@ -238,11 +238,51 @@
 <% end %>
 
 <!-- Sidebar Element -->
-<div id="game-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-80 z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto" style={if @show_sidebar, do: "transform: translateX(0);", else: "transform: translateX(100%);"}>
+<div id="game-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-80 z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto" style={if @show_sidebar, do: "transform: translateX(0);", else: "transform: translateX(100%);"}>
+  <div class="flex justify-between items-center mb-4">
+    <h3 class="text-lg font-semibold">Game Info</h3>
+    <button phx-click="toggle_sidebar" class="p-1 rounded-md hover:bg-gray-700"> 
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
   <div class="p-4">
-    <h3 class="text-lg font-semibold mb-2">Game Info</h3>
-    <p>Players: <%= Enum.count(@players) %></p>
-    <!-- Add more sidebar content: player list, settings, etc. -->
+    <div class="mb-6">
+      <h4 class="text-md font-semibold text-purple-300 mb-2">Game Stats</h4>
+      <p class="text-sm text-gray-300">Round: <span class="font-semibold"><%= @current_round %></span> of 26</p>
+      <p class="text-sm text-gray-300">Letter: <span class="font-semibold text-purple-400"><%= @current_letter %></span></p>
+      <p class="text-sm text-gray-300">Players: <span class="font-semibold"><%= Enum.count(@players) %></span></p>
+    </div>
+    
+    <div>
+      <h4 class="text-md font-semibold text-purple-300 mb-2">Leaderboard</h4>
+      <div class="space-y-2">
+        <%= for player <- Enum.sort_by(@players, & &1.score, :desc) do %>
+          <div class="flex items-center justify-between bg-gray-700/50 p-2 rounded-md">
+            <div class="flex items-center">
+              <div class="w-8 h-8 flex items-center justify-center rounded-full bg-purple-600 text-white font-bold mr-2">
+                <%= String.first(player.name) %>
+              </div>
+              <div class="flex flex-col">
+                <span class={if player.id == @current_player.id, do: "text-purple-300 font-bold", else: "text-gray-300"}>
+                  <%= player.name %>
+                  <%= if player.id == @current_player.id do %>
+                    <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-800 text-purple-100">
+                      <svg class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                      </svg>
+                      You
+                    </span>
+                  <% end %>
+                </span>
+              </div>
+            </div>
+            <span class="font-bold text-xl text-yellow-400"><%= player.score %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -293,7 +333,7 @@
                         </summary>
                         <div class="p-3 bg-gray-50 border-t border-gray-200">
                           <p class="text-sm italic text-gray-600">
-                            <strong>AI Explanation:</strong> <%= answer.explanation %>
+                            <%= answer.explanation %>
                           </p>
                         </div>
                       </details>
@@ -332,136 +372,38 @@
 <% end %>
 
 <script>
-  // Sidebar toggle functionality
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM loaded, initializing sidebar toggle");
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const closeSidebar = document.getElementById('close-sidebar');
-    const playersSidebar = document.getElementById('players-sidebar');
+  // Form validation - disable STOP button until all fields are filled
+  const form = document.querySelector('form[phx-submit="stop_round"]');
+  const stopButton = form ? form.querySelector('button[type="submit"]') : null;
+  const inputs = form ? form.querySelectorAll('input[required]') : [];
+  
+  function validateForm() {
+    if (!stopButton || stopButton.disabled) return;
     
-    if (!sidebarToggle) console.error("Sidebar toggle button not found!");
-    if (!closeSidebar) console.error("Close sidebar button not found!");
-    if (!playersSidebar) console.error("Players sidebar not found!");
-    
-    // Function to open sidebar
-    function openSidebar() {
-      console.log("Opening sidebar");
-      playersSidebar.classList.remove('translate-x-full');
-      // Add overlay
-      const overlay = document.createElement('div');
-      overlay.id = 'sidebar-overlay';
-      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30';
-      overlay.addEventListener('click', closeSidebarHandler);
-      document.body.appendChild(overlay);
-    }
-    
-    // Function to close sidebar
-    function closeSidebarHandler() {
-      console.log("Closing sidebar");
-      playersSidebar.classList.add('translate-x-full');
-      // Remove overlay
-      const overlay = document.getElementById('sidebar-overlay');
-      if (overlay) {
-        overlay.removeEventListener('click', closeSidebarHandler);
-        overlay.remove();
-      }
-    }
-    
-    // Add event listeners
-    if (sidebarToggle) {
-      console.log("Adding click event to sidebar toggle");
-      sidebarToggle.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        openSidebar();
-      });
-    }
-    
-    if (closeSidebar) {
-      closeSidebar.addEventListener('click', closeSidebarHandler);
-    }
-    
-    // Add accordion functionality
-    function initAccordions() {
-      console.log("Initializing accordions");
-      document.querySelectorAll('.accordion-header').forEach(header => {
-        header.addEventListener('click', function() {
-          console.log("Accordion clicked");
-          // Toggle the content visibility
-          const content = this.nextElementSibling;
-          content.classList.toggle('hidden');
-          
-          // Rotate the arrow icon
-          const icon = this.querySelector('.accordion-icon');
-          if (icon) {
-            icon.classList.toggle('rotate-180');
-          }
-        });
-      });
-    }
-    
-    // Initialize accordions on load
-    initAccordions();
-    
-    // Re-initialize accordions when the verification modal is shown
-    // This is needed because LiveView might replace the DOM elements
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          // Check if any verification modal or accordion was added
-          if (document.querySelector('#verification-modal') && 
-              document.querySelector('.player-accordion')) {
-            console.log("Verification modal detected, initializing accordions");
-            initAccordions();
-            
-            // Expand the first accordion by default for better UX
-            const firstHeader = document.querySelector('.accordion-header');
-            if (firstHeader) {
-              setTimeout(() => {
-                firstHeader.click();
-              }, 300);
-            }
-          }
-        }
-      });
-    });
-    
-    // Start observing the document body for DOM changes
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Form validation - disable STOP button until all fields are filled
-    const form = document.querySelector('form[phx-submit="stop_round"]');
-    const stopButton = form ? form.querySelector('button[type="submit"]') : null;
-    const inputs = form ? form.querySelectorAll('input[required]') : [];
-    
-    function validateForm() {
-      if (!stopButton || stopButton.disabled) return;
-      
-      // Check if all required inputs have values
-      let allFilled = true;
-      inputs.forEach(input => {
-        if (!input.value.trim()) {
-          allFilled = false;
-        }
-      });
-      
-      // Only enable the button if all fields are filled
-      stopButton.disabled = !allFilled;
-      if (!allFilled) {
-        stopButton.title = "You must fill all categories before stopping the round";
-      } else {
-        stopButton.title = "Stop the current round";
-      }
-    }
-    
-    // Add input event listeners
+    // Check if all required inputs have values
+    let allFilled = true;
     inputs.forEach(input => {
-      input.addEventListener('input', validateForm);
+      if (!input.value.trim()) {
+        allFilled = false;
+      }
     });
     
-    // Initial validation
-    validateForm();
+    // Only enable the button if all fields are filled
+    stopButton.disabled = !allFilled;
+    if (!allFilled) {
+      stopButton.title = "You must fill all categories before stopping the round";
+    } else {
+      stopButton.title = "Stop the current round";
+    }
+  }
+  
+  // Add input event listeners
+  inputs.forEach(input => {
+    input.addEventListener('input', validateForm);
   });
+  
+  // Initial validation
+  validateForm();
 </script>
 
 <style>
