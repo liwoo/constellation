@@ -7,8 +7,9 @@ A real-time multiplayer word game built with Phoenix LiveView and Elixir. Player
 - Real-time multiplayer gameplay using Phoenix LiveView and PubSub
 - Dynamic categories that change each round
 - AI verification of answers using Google's Gemini API
-- Interactive leaderboard
-- Beautiful space-themed UI
+- Detailed global leaderboard tracking player performance across all games
+- Comprehensive game rules page with scoring explanations
+- Beautiful space-themed UI with animated star background
 
 ## Setup
 
@@ -45,8 +46,36 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 6. The AI will verify all answers and award points:
    - 2 points for unique valid answers
    - 1 point for non-unique valid answers
-   - 2 bonus points for the player who stopped the round (if all their answers are valid)
-7. After 26 rounds (one for each letter), the player with the most points wins!
+   - 0 points for invalid answers
+   - +2 bonus points for the player who stopped the round (if all their answers are valid)
+   - -2 penalty points for the player who stopped the round (if none of their answers are valid)
+7. After multiple rounds, the player with the most points wins!
+
+## Leaderboard System
+
+The game features a comprehensive leaderboard system:
+
+- **Global Leaderboard**: Tracks player performance across all games
+  - Players with the same name are combined to show their aggregate performance
+  - Shows total score, games played, and average score per game
+  - Accessible via the navigation menu from any page
+
+- **Game-Specific Leaderboards**: Track detailed player performance within a single game
+  - Shows round-by-round score progression
+  - Highlights score changes between rounds
+  - Displays bonus/penalty points from stopping rounds
+
+## Game Rules
+
+A detailed rules page explains the game mechanics, scoring system, and strategies:
+
+- Basic gameplay explanation
+- Comprehensive scoring rules including unique/non-unique answers
+- Stopper bonus/penalty system
+- Answer validation criteria
+- Tips for success
+
+The rules page is accessible from the navigation menu on any page.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
 
