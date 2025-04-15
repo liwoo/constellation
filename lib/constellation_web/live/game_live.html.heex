@@ -42,7 +42,7 @@
                   value={Map.get(@form_values || %{}, category, "")}
                   class="form-input w-full bg-gray-800 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" 
                   placeholder={"Enter a #{String.downcase(category)} that starts with #{@current_letter}..."}
-                  disabled={@round_stopped || @game_status == "verifying"}
+                  disabled={@round_stopped || @game_status == "verifying" || @show_countdown_modal}
                   phx-debounce="300"
                   required>
               </div>
@@ -53,7 +53,7 @@
             <button type="submit" 
               id="stop-button"
               class="w-full px-6 py-4 rounded-md text-white bg-red-600 font-bold text-xl transition-all hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-800" 
-              disabled={@round_stopped || @game_status == "verifying" || !@all_fields_filled}>
+              disabled={@round_stopped || @game_status == "verifying" || !@all_fields_filled || @show_countdown_modal}>
               <%= if @round_stopped || @game_status == "verifying", do: "Round ended! Waiting for other players...", else: "STOP" %>
             </button>
             <!-- Debug info - will be removed in production -->
@@ -118,6 +118,24 @@
     </div>
   </div>
 </div>
+
+<!-- Countdown timer modal (non-dismissable) -->
+<%= if @show_countdown_modal do %>
+  <div id="countdown-timer-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]" aria-labelledby="countdown-modal-title" role="dialog" aria-modal="true">
+    <div class="bg-gray-800 text-white p-8 rounded-lg shadow-xl max-w-md w-11/12 text-center">
+      <h2 id="countdown-modal-title" class="text-3xl font-bold mb-6 text-center text-purple-400">Get Ready!</h2>
+      <p class="text-center mb-6">Round <span class="text-yellow-400 font-bold"><%= @current_round %></span> begins in:</p>
+      
+      <div class="mb-8">
+        <p class="text-center mb-2">Your letter is:</p>
+        <div class="text-8xl font-bold text-purple-400 mb-6"><%= @current_letter %></div>
+        <div class="text-6xl font-bold text-yellow-400 mb-4"><%= @countdown_seconds %></div>
+      </div>
+      
+      <p class="text-sm text-gray-400 italic">Get ready to enter words that start with this letter!</p>
+    </div>
+  </div>
+<% end %>
 
 <!-- Verification modal (non-dismissable) -->
 <%= if @is_verifying do %>

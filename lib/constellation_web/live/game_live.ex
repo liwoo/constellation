@@ -56,6 +56,13 @@ defmodule ConstellationWeb.GameLive do
       |> assign(:all_fields_filled, false) # Initialize all_fields_filled to false
       |> assign(:form_values, %{}) # Initialize form_values to an empty map
       |> assign(:verification_status, nil)
+      |> assign(:show_countdown_modal, false) # Initialize countdown modal state
+      |> assign(:countdown_seconds, 5) # Initialize countdown seconds
+    
+    # If the game is in progress and we just connected, start the countdown
+    if connected?(socket) && game_state.status == "in_progress" do
+      Process.send_after(self(), :start_countdown, 500)
+    end
     
     {:ok, socket}
   end
@@ -233,6 +240,69 @@ defmodule ConstellationWeb.GameLive do
   
   # Handle info
   @impl true
+  def handle_info({:game_started, data}, socket) do
+    socket = socket
+      |> assign(:current_round, data.round)
+      |> assign(:current_letter, data.letter)
+      |> assign(:current_categories, data.categories)
+      |> assign(:round_stopped, false)
+      |> assign(:game_status, "in_progress")
+      |> assign(:verification_data, nil)
+      |> assign(:is_verifying, false)
+      |> assign(:stopper_name, nil)
+      |> assign(:form_values, %{})  # Reset form values for new round
+      |> assign(:all_fields_filled, false)  # Reset validation state
+    
+    # Start countdown for the new round
+    Process.send_after(self(), :start_countdown, 100)
+    
+    {:noreply, socket}
+  end
+  
+  @impl true
+  def handle_info({:stop_requested, data}, socket) do
+    unless socket.assigns.stopper_name do
+      Logger.info("Received stop request from #{data.player_name}")
+      socket = socket
+        |> assign(:round_stopped, true)
+        |> assign(:is_verifying, true)
+        |> assign(:stopper_name, data.player_name)
+        |> assign(:game_status, "verifying")
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+  
+  @impl true
+  def handle_info({:round_update, data}, socket) do
+     Logger.info("Received round update: #{inspect(data)}")
+     socket = socket
+       |> assign(:current_round, data.round)
+       |> assign(:current_letter, data.letter)
+       |> assign(:current_categories, data.categories)
+       |> assign(:round_stopped, data.status != "in_progress")
+       |> assign(:game_status, data.status) 
+       |> assign(:verification_data, data.results)
+       |> assign(:is_verifying, data.status == "verifying")
+       |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
+       |> assign(:players, get_players_with_scores(socket.assigns.game_id))
+
+     # If the game status is "in_progress", start the countdown
+     if data.status == "in_progress" do
+       Process.send_after(self(), :start_countdown, 100)
+     end
+
+     # If verification just completed, hide verification modal and show scores modal
+     if data.status == "completed_verification" do
+       Process.send_after(self(), :verification_complete, 500)
+       Logger.info("Verification completed, will show scores modal")
+     end
+
+     {:noreply, socket}
+  end
+
+  @impl true
   def handle_info({:trigger_verification, game_id, stopper_session_id}, socket) do
     current_status = GameState.get_game_status(game_id)
 
@@ -277,31 +347,18 @@ defmodule ConstellationWeb.GameLive do
   end
   
   @impl true
-  def handle_info({:game_started, data}, socket) do
-    socket = socket
-      |> assign(:current_round, data.round)
-      |> assign(:current_letter, data.letter)
-      |> assign(:current_categories, data.categories)
-      |> assign(:round_stopped, false)
-      |> assign(:game_status, "in_progress")
-      |> assign(:verification_data, nil)
-      |> assign(:is_verifying, false)
-      |> assign(:stopper_name, nil)
-      |> assign(:form_values, %{})  # Reset form values for new round
-      |> assign(:all_fields_filled, false)  # Reset validation state
+  def handle_info(:start_countdown, socket) do
+    Logger.info("Starting countdown for round #{socket.assigns.current_round}")
     
-    {:noreply, socket}
-  end
-  
-  @impl true
-  def handle_info({:stop_requested, data}, socket) do
-    unless socket.assigns.stopper_name do
-      Logger.info("Received stop request from #{data.player_name}")
+    # Only start countdown if we're not already counting down and the game is in progress
+    if !socket.assigns.show_countdown_modal && socket.assigns.game_status == "in_progress" do
       socket = socket
-        |> assign(:round_stopped, true)
-        |> assign(:is_verifying, true)
-        |> assign(:stopper_name, data.player_name)
-        |> assign(:game_status, "verifying")
+        |> assign(:show_countdown_modal, true)
+        |> assign(:countdown_seconds, 5)
+      
+      # Schedule the first tick
+      Process.send_after(self(), :tick_countdown, 1000)
+      
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -309,28 +366,28 @@ defmodule ConstellationWeb.GameLive do
   end
   
   @impl true
-  def handle_info({:round_update, data}, socket) do
-     Logger.info("Received round update: #{inspect(data)}")
-     socket = socket
-       |> assign(:current_round, data.round)
-       |> assign(:current_letter, data.letter)
-       |> assign(:current_categories, data.categories)
-       |> assign(:round_stopped, data.status != "in_progress")
-       |> assign(:game_status, data.status) 
-       |> assign(:verification_data, data.results)
-       |> assign(:is_verifying, data.status == "verifying")
-       |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
-       |> assign(:players, get_players_with_scores(socket.assigns.game_id))
-
-     # If verification just completed, hide verification modal and show scores modal
-     if data.status == "completed_verification" do
-       Process.send_after(self(), :verification_complete, 500)
-       Logger.info("Verification completed, will show scores modal")
-     end
-
-     {:noreply, socket}
+  def handle_info(:tick_countdown, socket) do
+    # Only process if we're still showing the countdown modal
+    if socket.assigns.show_countdown_modal do
+      # Decrement the countdown
+      new_seconds = socket.assigns.countdown_seconds - 1
+      
+      socket = socket |> assign(:countdown_seconds, new_seconds)
+      
+      if new_seconds > 0 do
+        # Schedule the next tick
+        Process.send_after(self(), :tick_countdown, 1000)
+        {:noreply, socket}
+      else
+        # Countdown finished, hide the modal
+        socket = socket |> assign(:show_countdown_modal, false)
+        {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
   end
-
+  
   @impl true
   def handle_info(:verification_complete, socket) do 
     # Fetch/calculate scores and verified answers
