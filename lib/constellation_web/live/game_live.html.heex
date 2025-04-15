@@ -6,40 +6,40 @@
     <div class="stars3"></div>
   </div>
   
-  <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-5xl relative z-10">
-    <div class="text-center mb-4 sm:mb-8">
+  <div class="w-full sm:container sm:mx-auto px-0 sm:px-4 py-0 sm:py-2 md:py-8 relative z-10">
+    <div class="text-center mb-1 sm:mb-8">
       <p class="text-base sm:text-xl text-purple-200">Game in Progress</p>
     </div>
     
-    <div class="grid grid-cols-1 gap-4 sm:gap-6">
+    <div class="grid grid-cols-1 gap-0 sm:gap-6">
       <!-- Game board -->
-      <div class="relative bg-gray-800/80 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-lg border border-purple-500/30">
+      <div class="relative bg-gray-800/80 backdrop-blur-sm sm:rounded-xl p-3 sm:p-6 shadow-lg sm:border sm:border-purple-500/30 w-full">
         <!-- Hamburger menu button (positioned inside card) -->
-        <button phx-click="toggle_sidebar" class="absolute top-3 right-3 sm:top-6 sm:right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg hover:bg-purple-700 transition-colors">
+        <button phx-click="toggle_sidebar" class="absolute top-2 right-2 sm:top-6 sm:right-6 z-50 p-2 bg-purple-600 rounded-md shadow-lg hover:bg-purple-700 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         
-        <h2 class="text-lg sm:text-xl font-semibold text-purple-300 mb-2 sm:mb-4">Round <span><%= @current_round %></span></h2>
-        <div class="mb-3 sm:mb-6">
+        <h2 class="text-lg sm:text-xl font-semibold text-purple-300 mb-1 sm:mb-4">Round <span><%= @current_round %></span></h2>
+        <div class="mb-2 sm:mb-6">
           <p class="text-base sm:text-lg mb-1 sm:mb-2">Current Letter: <span class="text-xl sm:text-2xl font-bold text-purple-400"><%= @current_letter %></span></p>
           <div class="bg-gray-700/50 p-2 sm:p-4 rounded-lg">
             <p class="text-sm sm:text-base text-gray-300">Fill in words that start with the letter "<span><%= @current_letter %></span>" for each category below:</p>
           </div>
         </div>
         
-        <.form :let={_f} for={@form} phx-submit="stop_round" phx-change="validate_input" class="space-y-3 sm:space-y-4">
+        <.form :let={_f} for={@form} phx-submit="stop_round" phx-change="validate_input" class="space-y-2 sm:space-y-4">
           <!-- Category inputs -->
-          <div class="space-y-3 sm:space-y-4">
+          <div class="space-y-2 sm:space-y-4">
             <%= for category <- @current_categories do %>
               <div class="bg-gray-700/50 p-2 sm:p-4 rounded-lg">
-                <label class="block text-sm sm:text-base text-gray-300 mb-1 sm:mb-2"><%= category %></label>
+                <label class="block text-sm sm:text-base text-gray-300 mb-0.5 sm:mb-2"><%= category %></label>
                 <input type="text" 
                   name={category} 
                   id={"input-#{category}"}
                   value={Map.get(@form_values || %{}, category, "")}
-                  class="form-input w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white text-base focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  class="form-input w-full bg-gray-800 border border-gray-600 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-white text-base focus:outline-none focus:ring-2 focus:ring-purple-500" 
                   placeholder={"#{@current_letter}..."}
                   disabled={@round_stopped || @game_status == "verifying" || @show_countdown_modal}
                   phx-debounce="300"
@@ -48,14 +48,13 @@
             <% end %>
           </div>
           
-          <div class="mt-4 sm:mt-6 text-center">
+          <div class="mt-2 sm:mt-6 text-center">
             <button type="submit" 
               id="stop-button"
-              class="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-md text-white bg-red-600 font-bold text-lg sm:text-xl transition-all hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-800" 
+              class="w-full px-4 sm:px-6 py-2 sm:py-4 rounded-md text-white bg-red-600 font-bold text-lg sm:text-xl transition-all hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-800" 
               disabled={@round_stopped || @game_status == "verifying" || !@all_fields_filled || @show_countdown_modal}>
               <%= if @round_stopped || @game_status == "verifying", do: "Round ended! Waiting...", else: "STOP" %>
             </button>
-            <!-- Debug info - will be removed in production -->
           </div>
         </.form>
       </div>
@@ -64,7 +63,7 @@
 </div>
 
 <!-- Players sidebar (always hidden initially, fixed position) -->
-<div id="players-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-full sm:w-80 max-w-xs z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
+<div id="players-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-full sm:w-80 max-w-xs z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
   <div class="flex justify-end items-center mb-3 sm:mb-4">
     <button id="close-sidebar" class="p-1 rounded-md hover:bg-gray-700"> 
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,6 +110,24 @@
     </div>
   </div>
 </div>
+
+<!-- Countdown timer modal (non-dismissable) -->
+<%= if @show_countdown_modal do %>
+  <div id="countdown-timer-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]" aria-labelledby="countdown-modal-title" role="dialog" aria-modal="true">
+    <div class="bg-gray-800 text-white p-4 sm:p-8 rounded-lg shadow-xl max-w-md w-11/12 text-center">
+      <h2 id="countdown-modal-title" class="text-xl sm:text-3xl font-bold mb-3 sm:mb-6 text-center text-purple-400">Get Ready!</h2>
+      <p class="text-center mb-4 sm:mb-6">Round <span class="text-yellow-400 font-bold"><%= @current_round %></span> begins in:</p>
+      
+      <div class="mb-4 sm:mb-8">
+        <p class="text-center mb-2">Your letter is:</p>
+        <div class="text-5xl sm:text-8xl font-bold text-purple-400 mb-4 sm:mb-6"><%= @current_letter %></div>
+        <div class="text-4xl sm:text-6xl font-bold text-yellow-400 mb-3 sm:mb-4"><%= @countdown_seconds %></div>
+      </div>
+      
+      <p class="text-xs sm:text-sm text-gray-400 italic">Get ready to enter words that start with this letter!</p>
+    </div>
+  </div>
+<% end %>
 
 <!-- Verification modal (non-dismissable) -->
 <%= if @is_verifying do %>
@@ -213,7 +230,7 @@
 <% end %>
 
 <!-- Sidebar Element -->
-<div id="game-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-full sm:w-80 max-w-xs z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto" style={if @show_sidebar, do: "transform: translateX(0);", else: "transform: translateX(100%);"}>
+<div id="game-sidebar" class="bg-gray-800/80 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-lg border border-purple-500/30 fixed top-0 right-0 bottom-0 w-full sm:w-80 max-w-xs z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto" style={if @show_sidebar, do: "transform: translateX(0);", else: "transform: translateX(100%);"}>
   <div class="flex justify-between items-center mb-3 sm:mb-4">
     <h3 class="text-lg font-semibold">Game Info</h3>
     <button phx-click="toggle_sidebar" class="p-1 rounded-md hover:bg-gray-700"> 
