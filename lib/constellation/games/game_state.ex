@@ -506,29 +506,31 @@ defmodule Constellation.Games.GameState do
     end
   end
 
-  # Generate explanation text for a category result
+  # Helper function to generate explanation text for a category result
   defp generate_explanation(category_result, _is_stopper, _stopper_bonus) do
-    category = category_result["category"]
-    answer = category_result["answer"]
-    is_valid = category_result["is_valid"]
-    is_unique = category_result["is_unique"]
-    _points = category_result["points"]
-    
-    cond do
-      is_nil(answer) || answer == "" ->
-        "No answer provided for #{category}."
-        
-      !is_valid ->
-        "Answer '#{answer}' for #{category} is invalid. It must start with the correct letter."
-        
-      is_unique ->
-        "Answer '#{answer}' for #{category} is valid and unique. +2 points."
-        
-      is_valid && !is_unique ->
-        "Answer '#{answer}' for #{category} is valid but not unique. +1 point."
-        
-      true ->
-        "Answer '#{answer}' for #{category}."
+    # If the AI provided an explanation, use it
+    if Map.has_key?(category_result, "explanation") do
+      category_result["explanation"]
+    else
+      # Otherwise, generate a default explanation
+      category = category_result["category"]
+      answer = category_result["answer"]
+      is_valid = category_result["is_valid"]
+      points = category_result["points"]
+      
+      cond do
+        is_nil(answer) || answer == "" ->
+          "No answer provided for #{category}."
+          
+        !is_valid ->
+          "Answer '#{answer}' for #{category} is invalid. It does not appear to be a valid entry for this category."
+          
+        is_valid ->
+          "Answer '#{answer}' for #{category} is valid. +#{points} points."
+          
+        true ->
+          "Answer '#{answer}' for #{category}."
+      end
     end
   end
   

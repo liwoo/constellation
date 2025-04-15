@@ -84,7 +84,12 @@ defmodule Constellation.API.GeminiClient do
 
     Here are the rules:
     1. All answers must start with the letter "#{letter}".
-    2. Answers are scored as follows:
+    2. For an answer to be valid, it must:
+       - Start with the letter "#{letter}"
+       - Be a real, existing thing in the given category
+       - Be correctly spelled (with minor typos allowed)
+       - Be appropriate for the category
+    3. Answers are scored as follows:
        - Unique valid answer: 2 points (an answer is unique if NO OTHER player used the same answer for the same category)
        - Non-unique valid answer: 1 point (if multiple players give the same valid answer for a category)
        - Invalid answer: 0 points (including blank answers shown as "<blank>")
@@ -100,9 +105,13 @@ defmodule Constellation.API.GeminiClient do
 
     The player with ID "#{stopper_id}" stopped the round.
 
+    IMPORTANT: When determining if an answer is valid, be lenient but fair. If an answer starts with the letter "#{letter}" and could reasonably be considered part of the category, mark it as valid. Only mark answers as invalid if they clearly don't belong in the category or don't exist.
+
     IMPORTANT: When determining if an answer is unique, compare it with ALL other players' answers for the same category. An answer is only unique if no other player provided the same answer for that category.
 
     IMPORTANT: The stopper bonus (2 points) should ONLY be awarded to the player who stopped the round IF they have at least 1 point for EVERY category. If any of their answers scored 0 points, they do not get the bonus.
+
+    IMPORTANT: For each answer, provide a clear explanation of why it is valid or invalid. If invalid, explain specifically why it doesn't meet the criteria.
 
     Please provide your verification results in the following JSON format:
     [
@@ -115,7 +124,8 @@ defmodule Constellation.API.GeminiClient do
             "answer": "player_answer",
             "is_valid": true/false,
             "is_unique": true/false,
-            "points": score_value
+            "points": score_value,
+            "explanation": "Explanation of why this answer is valid or invalid"
           },
           ...
         ],

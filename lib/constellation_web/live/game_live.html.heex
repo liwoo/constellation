@@ -154,31 +154,41 @@
                 <div class="accordion-content hidden p-3 bg-gray-800/70 border-t border-gray-600">
                   <%= if @verification_data && Map.has_key?(@verification_data, player.session_id) do %>
                     <% player_data = @verification_data[player.session_id] %>
-                    <ul class="space-y-2">
+                    <ul class="list-none space-y-2 text-gray-300">
                       <%= for {category, result} <- player_data.category_results do %>
-                        <li class="flex items-start justify-between">
-                          <div>
-                            <span class="text-gray-400"><%= category %>:</span> 
-                            <span class={if result.is_valid, do: "text-green-300", else: "text-red-300"}>
-                              <%= result.answer || "(no answer)" %>
-                            </span>
-                          </div>
-                          <span class={if result.is_valid, do: "font-medium text-green-300", else: "font-medium text-red-300"}>
-                            <%= if result.is_valid, do: "+#{result.points}", else: "0" %> pts
-                          </span>
-                        </li>
-                      <% end %>
-                      
-                      <!-- Show stopper bonus if applicable -->
-                      <%= if player_data.is_stopper && player_data.stopper_bonus > 0 do %>
-                        <li class="flex items-start justify-between mt-2 pt-2 border-t border-gray-600">
-                          <div>
-                            <span class="text-yellow-400">Stopper Bonus:</span>
-                          </div>
-                          <span class="font-medium text-yellow-400">+<%= player_data.stopper_bonus %> pts</span>
+                        <li>
+                          <details class="answer-accordion border border-gray-700 rounded-md overflow-hidden">
+                            <summary class="p-2 bg-gray-800 hover:bg-gray-700 cursor-pointer flex justify-between items-center">
+                              <span>
+                                <span class="font-medium"><%= category %>:</span> 
+                                <span class={if result.is_valid, do: "text-green-400", else: "text-red-400"}>
+                                  <%= result.answer || "(no answer)" %>
+                                </span> 
+                                <span class={if result.is_valid, do: "text-green-400", else: "text-red-400"}>
+                                  (<%= if result.is_valid, do: "+#{result.points}", else: "0" %> pts)
+                                </span>
+                              </span>
+                              <span class="text-xs text-gray-500">▼</span>
+                            </summary>
+                            <div class="p-3 bg-gray-800 border-t border-gray-700">
+                              <p class="text-sm italic text-gray-400">
+                                <%= result.explanation %>
+                              </p>
+                            </div>
+                          </details>
                         </li>
                       <% end %>
                     </ul>
+                    
+                    <!-- Show stopper bonus if applicable -->
+                    <%= if player_data.is_stopper && player_data.stopper_bonus > 0 do %>
+                      <div class="mt-3 p-2 bg-yellow-900/50 border border-yellow-700 rounded-md">
+                        <div class="flex justify-between items-center">
+                          <span class="text-yellow-400 font-medium">Stopper Bonus:</span>
+                          <span class="font-medium text-yellow-400">+<%= player_data.stopper_bonus %> pts</span>
+                        </div>
+                      </div>
+                    <% end %>
                   <% else %>
                     <p class="text-gray-400 italic">No data available</p>
                   <% end %>
@@ -226,7 +236,7 @@
 <!-- Verification Modal -->
 <%= if @show_verification_modal do %>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl overflow-y-auto" style="max-height: 80vh;">
       <h3 class="text-xl font-semibold text-gray-800 mb-4">Round Stopped</h3>
       <p class="text-gray-600">Verifying answers, please wait...</p>
       <!-- Placeholder for spinner or progress -->
@@ -240,7 +250,7 @@
 <!-- Scores Modal -->
 <%= if @show_scores_modal do %>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-lg overflow-y-auto" style="max-height: 80vh;">
+    <div class="modal non-dismissable bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl overflow-y-auto" style="max-height: 80vh;">
       <h3 class="text-xl font-semibold text-gray-800 mb-4">Round Scores</h3>
       <div class="accordion space-y-2">
         <%= for score_entry <- @player_scores do %>
@@ -254,11 +264,40 @@
               <%= if Enum.empty?(score_entry.verified_answers) do %>
                  <p class="text-gray-500 italic">No verified answers for this round.</p>
               <% else %>
-                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <ul class="list-none space-y-2 text-gray-700">
                   <%= for answer <- score_entry.verified_answers do %>
-                    <li><%= answer %></li>
+                    <li>
+                      <details class="answer-accordion border border-gray-200 rounded-md overflow-hidden">
+                        <summary class="p-2 bg-gray-50 hover:bg-gray-100 cursor-pointer flex justify-between items-center">
+                          <span>
+                            <span class="font-medium"><%= answer.category %>:</span> 
+                            <span class={if answer.is_valid, do: "text-green-600", else: "text-red-600"}>
+                              <%= answer.answer %>
+                            </span> 
+                            <span class="text-sm text-gray-500"><%= answer.status_text %></span>
+                          </span>
+                          <span class="text-xs text-gray-500">▼</span>
+                        </summary>
+                        <div class="p-3 bg-gray-50 border-t border-gray-200">
+                          <p class="text-sm italic text-gray-600">
+                            <strong>AI Explanation:</strong> <%= answer.explanation %>
+                          </p>
+                        </div>
+                      </details>
+                    </li>
                   <% end %>
                 </ul>
+                
+                <%= if score_entry.stopper_bonus && score_entry.stopper_bonus > 0 do %>
+                  <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p class="font-medium text-yellow-700">
+                      <span class="mr-1">🏆</span> Stopper Bonus: +<%= score_entry.stopper_bonus %> points
+                    </p>
+                    <p class="text-sm text-yellow-600 italic">
+                      Bonus for stopping the round with all valid answers.
+                    </p>
+                  </div>
+                <% end %>
               <% end %>
             </div>
           </details>

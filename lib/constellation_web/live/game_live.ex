@@ -266,7 +266,7 @@ defmodule ConstellationWeb.GameLive do
     
     # Perform the verification within the LiveView process
     case GameState.verify_round(game_id) do
-      {:ok, results} ->
+      {:ok, _results} ->
         Logger.info("Verification completed successfully for game #{game_id}")
         {:noreply, socket |> assign(:verification_status, "completed")}
         
@@ -397,25 +397,37 @@ defmodule ConstellationWeb.GameLive do
           # Get all answers with their verification status and scores
           all_answers = entries
           |> Enum.filter(fn entry -> 
-            # Filter out entries with _unused_ prefix in category
-            !String.starts_with?(entry.category, "_unused_")
+            # Filter out entries with _unused_ prefix in category and include only regular categories
+            !String.starts_with?(entry.category, "_unused_") && entry.category != "STOPPER_BONUS"
           end)
           |> Enum.map(fn entry -> 
             status_text = cond do
               entry.verification_status != "completed" -> "(pending)"
-              entry.is_valid -> "(#{entry.score} points)"
+              entry.is_valid -> "(valid - #{entry.score} points)"
               true -> "(invalid - 0 points)"
             end
             
-            "#{entry.category}: #{entry.answer} #{status_text}" 
+            %{
+              category: entry.category,
+              answer: entry.answer,
+              status_text: status_text,
+              is_valid: entry.is_valid,
+              score: entry.score || 0,
+              explanation: entry.ai_explanation || "No explanation available"
+            }
           end)
+          
+          # Check if player has a stopper bonus
+          stopper_bonus = entries
+          |> Enum.find(fn entry -> entry.category == "STOPPER_BONUS" end)
           
           # Create player score entry
           %{
             player_id: player.id,
             name: player.name,
             score: total_score,
-            verified_answers: all_answers
+            verified_answers: all_answers,
+            stopper_bonus: if(stopper_bonus, do: stopper_bonus.score, else: 0)
           }
         end)
         |> Enum.sort_by(fn entry -> entry.score end, :desc) # Sort by score descending

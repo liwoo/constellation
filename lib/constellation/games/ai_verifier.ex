@@ -87,37 +87,6 @@ defmodule Constellation.Games.AIVerifier do
     end
   end
   
-  # Format player answers for the Gemini prompt
-  defp format_player_answers_for_prompt(player_answers, categories) do
-    player_answers
-    |> Enum.map(fn player ->
-      """
-      Player: #{player["name"]} (ID: #{player["session_id"]})
-      #{format_player_categories(player["answers"], categories)}
-      """
-    end)
-    |> Enum.join("\n")
-  end
-  
-  # Format a player's category answers
-  defp format_player_categories(answers, categories) do
-    categories
-    |> Enum.map(fn category ->
-      answer = Map.get(answers, category, "")
-      "- #{category}: #{answer}"
-    end)
-    |> Enum.join("\n")
-  end
-  
-  @doc """
-  Parses the response from Gemini API.
-  """
-  def parse_gemini_response(response) do
-    # In a real implementation, parse JSON response
-    # For now, we'll just return the mock response
-    {:ok, response}
-  end
-  
   @doc """
   Mock implementation of Gemini verification for development.
   """
