@@ -394,11 +394,20 @@ defmodule ConstellationWeb.GameLive do
             acc + (entry.score || 0)
           end)
           
-          # Get valid answers
-          valid_answers = entries
-          |> Enum.filter(fn entry -> entry.is_valid end)
+          # Get all answers with their verification status and scores
+          all_answers = entries
+          |> Enum.filter(fn entry -> 
+            # Filter out entries with _unused_ prefix in category
+            !String.starts_with?(entry.category, "_unused_")
+          end)
           |> Enum.map(fn entry -> 
-            "#{entry.category}: #{entry.answer} (#{entry.score} points)" 
+            status_text = cond do
+              entry.verification_status != "completed" -> "(pending)"
+              entry.is_valid -> "(#{entry.score} points)"
+              true -> "(invalid - 0 points)"
+            end
+            
+            "#{entry.category}: #{entry.answer} #{status_text}" 
           end)
           
           # Create player score entry
@@ -406,7 +415,7 @@ defmodule ConstellationWeb.GameLive do
             player_id: player.id,
             name: player.name,
             score: total_score,
-            verified_answers: valid_answers
+            verified_answers: all_answers
           }
         end)
         |> Enum.sort_by(fn entry -> entry.score end, :desc) # Sort by score descending

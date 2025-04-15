@@ -455,7 +455,7 @@ defmodule Constellation.Games.GameState do
     Logger.info("Ensuring zero-score entries for player #{player_id}, round #{state.current_round}")
     Enum.each(state.current_categories, fn category ->
       upsert_round_entry(game_id, player_id, state, category, %{
-        answer: "",
+        answer: "<blank>",  # Use "<blank>" instead of empty string
         score: 0,
         verification_status: "completed",
         is_valid: false,
