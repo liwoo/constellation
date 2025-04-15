@@ -2,4 +2,19 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* Import Press Start 2P font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 /* This file is for your main application CSS */
+
+/* Apply Press Start 2P font to headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Press Start 2P', cursive;
+}
+
+/* Apply Press Start 2P font to game title */
+.game-title {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+}
