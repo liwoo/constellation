@@ -112,6 +112,13 @@ defmodule ConstellationWeb.GameLive do
       # Submit this player's answers immediately
       submit_current_player_answers(socket)
       
+      # Update the socket with the new state and show verification modal immediately
+      socket = socket
+        |> assign(:round_stopped, true)
+        |> assign(:stopper_name, current_player.name)
+        |> assign(:verification_status, "starting")
+        |> assign(:show_verification_modal, true)
+      
       # If this player is the owner or designated coordinator, schedule aggregation
       if socket.assigns.is_owner do
         Logger.info("This player (#{current_player.name}) is the owner, scheduling aggregation in 5 seconds")
@@ -124,12 +131,6 @@ defmodule ConstellationWeb.GameLive do
       else
         Logger.info("This player (#{current_player.name}) is not the owner, not scheduling aggregation")
       end
-      
-      # Update the socket with the new state
-      socket = socket
-        |> assign(:round_stopped, true)
-        |> assign(:stopper_name, current_player.name)
-        |> assign(:game_status, "collecting")
       
       {:noreply, socket}
     end
@@ -500,6 +501,8 @@ defmodule ConstellationWeb.GameLive do
       |> assign(:round_stopped, true)
       |> assign(:stopper_name, data.stopper_name)
       |> assign(:game_status, "collecting")
+      |> assign(:verification_status, "starting") # Set verification status
+      |> assign(:show_verification_modal, true)   # Show verification modal immediately
     
     # If this message includes submit_answers: true, submit this player's current answers
     if Map.get(data, :submit_answers, false) do
