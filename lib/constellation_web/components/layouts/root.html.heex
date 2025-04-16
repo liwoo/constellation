@@ -4,7 +4,34 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="Constellation" suffix=" · Phoenix Framework">
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Constellation - Word Association Game">
+    <meta name="description" content="Play Constellation, a fun multiplayer word association game where you compete with friends to come up with words starting with a specific letter across various categories.">
+    <meta name="keywords" content="word game, association game, multiplayer game, word categories, online game">
+    <meta name="author" content="Constellation Game">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://games.kwathu.ai/">
+    <meta property="og:title" content="Constellation - Word Association Game">
+    <meta property="og:description" content="Play Constellation, a fun multiplayer word association game where you compete with friends to come up with words starting with a specific letter across various categories.">
+    <meta property="og:image" content="https://games.kwathu.ai/images/constellation.jpg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://games.kwathu.ai/">
+    <meta property="twitter:title" content="Constellation - Word Association Game">
+    <meta property="twitter:description" content="Play Constellation, a fun multiplayer word association game where you compete with friends to come up with words starting with a specific letter across various categories.">
+    <meta property="twitter:image" content="https://games.kwathu.ai/images/constellation.jpg">
+    
+    <!-- Theme Color for Mobile Browsers -->
+    <meta name="theme-color" content="#1f2937">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href={~p"/images/constellation-og-image.svg"}>
+    
+    <.live_title default="Constellation" suffix=" · Word Association Game">
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />

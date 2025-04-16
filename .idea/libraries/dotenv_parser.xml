@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="dotenv_parser" type="mix">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/dotenv_parser/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/dotenv_parser/ebin" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/deps/dotenv_parser/lib" />
+      <root url="file://$PROJECT_DIR$/deps/dotenv_parser/lib" />
+    </SOURCES>
+  </library>
+</component>

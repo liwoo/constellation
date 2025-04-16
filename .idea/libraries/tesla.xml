@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="tesla" type="mix">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/tesla/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/tesla/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/tesla/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/tesla/ebin" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/deps/tesla/lib" />
+      <root url="file://$PROJECT_DIR$/deps/tesla/lib" />
+    </SOURCES>
+  </library>
+</component>

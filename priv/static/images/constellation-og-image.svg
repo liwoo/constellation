@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1f2937"/>
+  
+  <!-- Background stars -->
+  <g opacity="0.5">
+    <circle cx="100" cy="200" r="3" fill="#d8b4fe" />
+    <circle cx="300" cy="400" r="4" fill="#d8b4fe" />
+    <circle cx="500" cy="150" r="5" fill="#d8b4fe" />
+    <circle cx="700" cy="300" r="3" fill="#d8b4fe" />
+    <circle cx="900" cy="200" r="4" fill="#d8b4fe" />
+    <circle cx="150" cy="500" r="5" fill="#d8b4fe" />
+    <circle cx="350" cy="600" r="3" fill="#d8b4fe" />
+    <circle cx="550" cy="450" r="4" fill="#d8b4fe" />
+    <circle cx="750" cy="550" r="5" fill="#d8b4fe" />
+    <circle cx="950" cy="500" r="3" fill="#d8b4fe" />
+    <circle cx="200" cy="100" r="4" fill="#d8b4fe" />
+    <circle cx="400" cy="200" r="5" fill="#d8b4fe" />
+    <circle cx="600" cy="350" r="3" fill="#d8b4fe" />
+    <circle cx="800" cy="150" r="4" fill="#d8b4fe" />
+    <circle cx="1000" cy="300" r="5" fill="#d8b4fe" />
+  </g>
+  
+  <!-- Constellation lines -->
+  <g opacity="0.3">
+    <path d="M100,200 L300,400 L500,150 L700,300 L900,200" stroke="#8b5cf6" stroke-width="2" fill="none" />
+    <path d="M150,500 L350,600 L550,450 L750,550 L950,500" stroke="#8b5cf6" stroke-width="2" fill="none" />
+    <path d="M200,100 L400,200 L600,350 L800,150 L1000,300" stroke="#8b5cf6" stroke-width="2" fill="none" />
+  </g>
+  
+  <!-- Star icon -->
+  <g transform="translate(600, 200) scale(5)">
+    <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" fill="#a78bfa" />
+  </g>
+  
+  <!-- Text -->
+  <text x="600" y="380" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="url(#gradient)" text-anchor="middle">Constellation</text>
+  <text x="600" y="450" font-family="Arial, sans-serif" font-size="40" fill="#d8b4fe" text-anchor="middle">Word Association Game</text>
+  
+  <!-- Gradient for text -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#f472b6" />
+    </linearGradient>
+  </defs>
+</svg>
