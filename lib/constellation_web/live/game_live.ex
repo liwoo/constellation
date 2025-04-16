@@ -288,7 +288,7 @@ defmodule ConstellationWeb.GameLive do
        |> assign(:current_categories, data.categories)
        |> assign(:round_stopped, data.status != "in_progress")
        |> assign(:game_status, data.status) 
-       |> assign(:verification_data, data.results)
+       |> assign(:verification_data, Map.get(data, :results))
        |> assign(:is_verifying, data.status == "verifying")
        |> assign(:stopper_name, if(data.status == "verifying", do: socket.assigns.stopper_name, else: nil))
        |> assign(:players, get_players_with_scores(socket.assigns.game_id))
