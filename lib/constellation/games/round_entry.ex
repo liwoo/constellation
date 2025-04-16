@@ -113,6 +113,19 @@ defmodule Constellation.Games.RoundEntry do
   end
   
   @doc """
+  Get a specific entry for a player, game, round, and category
+  """
+  def get_entry(player_id, game_id, round_number, category) do
+    from(e in __MODULE__,
+      where: e.player_id == ^player_id and 
+             e.game_id == ^game_id and 
+             e.round_number == ^round_number and 
+             e.category == ^category
+    )
+    |> Repo.one()
+  end
+  
+  @doc """
   Score entries for a round based on uniqueness
   
   Scoring rules:

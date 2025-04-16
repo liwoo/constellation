@@ -136,9 +136,16 @@ defmodule Constellation.Games.AIVerifier do
       end)
       
       # Check if player gets stopper bonus
-      is_stopper = player["session_id"] == stopper_id
+      is_stopper = player["session_id"] == stopper_id || player["player_id"] == stopper_id
       all_answers_valid = Enum.all?(category_results, fn result -> result["is_valid"] end)
-      stopper_bonus = if is_stopper && all_answers_valid, do: 2, else: 0
+      has_valid_answers = Enum.any?(category_results, fn result -> result["is_valid"] end)
+      
+      stopper_bonus = cond do
+        is_stopper && all_answers_valid -> 2
+        is_stopper && !has_valid_answers -> -2
+        is_stopper -> 0
+        true -> 0
+      end
       
       total_points = base_points + stopper_bonus
       

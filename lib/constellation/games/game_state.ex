@@ -7,6 +7,7 @@ defmodule Constellation.Games.GameState do
   alias Constellation.Games.Categories
   alias Constellation.Games.AIVerifier
   alias Constellation.Games.RoundEntry
+  alias Constellation.Games.Player
   require Logger
 
   schema "game_states" do
@@ -109,23 +110,38 @@ defmodule Constellation.Games.GameState do
   Consider using Ecto.Multi if updates become complex.
   """
   def record_player_submission(game_id, player_id, answers) do
+    # Fetch the current state initially mainly to check existence and get round #
     case get_game_state(game_id) do
       nil ->
         Logger.error("Cannot record submission, GameState not found for game #{game_id}")
         {:error, :not_found}
-      state ->
-        # Ensure player_id is a string for consistent lookup
+
+      initial_state -> # We have an initial state, proceed with update attempt
         player_id_str = to_string(player_id)
-        
-        # Add or overwrite the player's submission for the current round
-        updated_submissions = Map.put(state.current_round_submissions || %{}, player_id_str, answers)
+        Logger.info("Attempting to record submission for player #{player_id_str} in game #{game_id}, round #{initial_state.current_round}")
 
-        Logger.info("Recording submission for player #{player_id} in game #{game_id}, round #{state.current_round}")
-        Logger.debug("Submissions map updated: #{inspect(updated_submissions)}")
+        # --- Update Logic --- 
+        # Fetch the *latest* state again right before updating to minimize race condition
+        current_state = get_game_state!(game_id) # Use ! as we expect it to exist now
 
-        state
-        |> changeset(%{current_round_submissions: updated_submissions})
-        |> Repo.update()
+        # Merge the new submission into the *latest* submissions map
+        current_submissions = current_state.current_round_submissions || %{}
+        updated_submissions = Map.put(current_submissions, player_id_str, answers)
+
+        Logger.debug("Merging submission for player #{player_id_str}. Current map size: #{map_size(current_submissions)}, Updated map size: #{map_size(updated_submissions)}")
+
+        # Update the latest state with the merged submissions
+        case current_state
+             |> changeset(%{current_round_submissions: updated_submissions})
+             |> Repo.update() do
+          {:ok, final_state} ->
+            Logger.info("Successfully recorded submission for player #{player_id_str}")
+            {:ok, final_state}
+          {:error, changeset} ->
+            Logger.error("Failed to record submission for player #{player_id_str}: #{inspect(changeset.errors)}")
+            {:error, changeset}
+        end
+        # --- End Update Logic ---
     end
   end
 
@@ -173,12 +189,11 @@ defmodule Constellation.Games.GameState do
   Process verification results and update player scores
   """
   def process_verification_results(game_id, results) do
-    # Get the current game state to get round number and letter
-    state = get_game_state(game_id)
-
-    Logger.info("Processing verification results for game #{game_id}, round #{state.current_round}, letter #{state.current_letter}")
-    Logger.info("Received #{length(results)} player results sets from AI Verifier")
-
+    Logger.info("Processing verification results for game #{game_id}")
+    
+    # Get the current game state
+    state = get_game_state!(game_id)
+    
     # Fetch all players associated with this game
     all_players = Constellation.Games.Player.list_players_for_game(game_id)
     # Create a map of session_id -> player for efficient lookup
@@ -193,20 +208,72 @@ defmodule Constellation.Games.GameState do
     end)
     Logger.debug("Results map keys: #{inspect(Map.keys(results_map))}")
 
+    # Get the submissions from the game state
+    submissions = state.current_round_submissions || %{}
+    Logger.info("Current round submissions: #{inspect(Map.keys(submissions))}")
+
     # Ensure all players have entries processed
     Enum.each(player_map, fn {session_id, player} ->
       # Try to find results for this player by session_id or numeric ID
-      player_result = Map.get(results_map, session_id) || 
+      player_result = Map.get(results_map, session_id) ||
                       Map.get(results_map, "#{player.id}") ||
-                      Map.get(results_map, player.id)
+                      Map.get(results_map, player.id) ||
+                      # Also try to find by player_id in the result
+                      Enum.find_value(results, fn result -> 
+                        if result["player_id"] == "#{player.id}" || 
+                           result["session_id"] == session_id do
+                          result
+                        else
+                          nil
+                        end
+                      end)
       
-      Logger.debug("Looking for results for player #{player.name}: session_id=#{session_id}, id=#{player.id}, found=#{player_result != nil}")
+      # Check if this player has submissions
+      player_submissions = Map.get(submissions, "#{player.id}") || 
+                           Map.get(submissions, player.id) || 
+                           %{}
+      
+      has_submissions = map_size(player_submissions) > 0
+      
+      Logger.debug("Looking for results for player #{player.name}: session_id=#{session_id}, id=#{player.id}, found=#{player_result != nil}, has_submissions=#{has_submissions}")
       
       case player_result do
         nil ->
-          # Player has no results from AI Verifier - ensure zero-score entries
-          Logger.warning("Player #{player.name} (#{session_id}) has no results from AI Verifier. Ensuring zero-score entries.")
-          ensure_zero_entries_for_player(game_id, player.id, state)
+          # Player has no results from AI Verifier
+          if has_submissions do
+            # Player submitted answers but they weren't processed by the AI
+            # Create entries based on their submissions
+            Logger.warning("Player #{player.name} (#{session_id}) has submissions but no AI verification results. Creating entries from submissions.")
+            Enum.each(player_submissions, fn {category, answer} ->
+              # Only create entries for categories that match the current round
+              if Enum.member?(state.current_categories, category) do
+                # Simple validation - check if answer starts with the round letter
+                is_valid = String.length(answer) > 0 && 
+                          String.first(String.downcase(answer)) == String.first(String.downcase(state.current_letter))
+                
+                upsert_round_entry(game_id, player.id, state, category, %{
+                  answer: answer,
+                  score: if(is_valid, do: 1, else: 0),
+                  verification_status: "completed",
+                  is_valid: is_valid,
+                  ai_explanation: if(is_valid, 
+                    do: "Valid answer starting with #{state.current_letter}", 
+                    else: "Invalid answer - must start with #{state.current_letter}")
+                })
+              end
+            end)
+          else
+            # Player has no submissions and no results - ensure zero-score entries
+            Logger.warning("Player #{player.name} (#{session_id}) has no submissions and no AI verification results. Ensuring zero-score entries.")
+            ensure_zero_entries_for_player(game_id, player.id, state)
+          end
+
+          # Check if this player is the stopper and apply penalty if needed
+          is_stopper? = session_id == state.stopper_id || "#{player.id}" == state.stopper_id
+          if is_stopper? do
+            Logger.info("Player #{player.name} is the stopper but has no verification results. Applying penalty.")
+            apply_stopper_penalty(game_id, player.id, state)
+          end
 
         player_result ->
           # Player has results, process them
@@ -241,9 +308,10 @@ defmodule Constellation.Games.GameState do
 
           # --- Stopper Bonus/Penalty Logic ---
           # Check if THIS player is the stopper based on state.stopper_id
-          is_stopper? = player.session_id == state.stopper_id
+          is_stopper? = player.session_id == state.stopper_id || "#{player.id}" == state.stopper_id
           
           if is_stopper? do
+            Logger.info("Player #{player.name} (#{player.id}) is the stopper. All valid: #{all_valid?}, Has valid: #{has_valid_answers}")
             entry_params = cond do
               # All answers are valid - give full bonus
               all_valid? -> 
@@ -323,14 +391,37 @@ defmodule Constellation.Games.GameState do
   defp ensure_zero_entries_for_player(game_id, player_id, state) do
     Logger.info("Ensuring zero-score entries for player #{player_id}, round #{state.current_round}")
     Enum.each(state.current_categories, fn category ->
-      upsert_round_entry(game_id, player_id, state, category, %{
-        answer: "<blank>",  # Use "<blank>" instead of empty string
-        score: 0,
-        verification_status: "completed",
-        is_valid: false,
-        ai_explanation: "No answer submitted or processed for this category."
-      })
+      # First check if an entry already exists for this player, category, and round
+      existing_entry = Constellation.Games.RoundEntry.get_entry(
+        player_id,
+        game_id,
+        state.current_round,
+        category
+      )
+      
+      # Only create a blank entry if no entry exists
+      if is_nil(existing_entry) do
+        upsert_round_entry(game_id, player_id, state, category, %{
+          answer: "<blank>",  # Use "<blank>" instead of empty string
+          score: 0,
+          verification_status: "completed",
+          is_valid: false,
+          ai_explanation: "No answer submitted or processed for this category."
+        })
+      end
     end)
+  end
+
+  # Helper function to apply penalty to the stopper if they have no verification results
+  defp apply_stopper_penalty(game_id, player_id, state) do
+    Logger.info("Applying penalty to stopper player #{player_id}, round #{state.current_round}")
+    upsert_round_entry(game_id, player_id, state, "STOPPER_PENALTY", %{
+      answer: "Stopped round with no valid answers",
+      score: -2,
+      verification_status: "completed",
+      is_valid: false,
+      ai_explanation: "-2 penalty for stopping with no valid answers"
+    })
   end
 
   # Helper function to find or create a round entry and update it
@@ -446,7 +537,7 @@ defmodule Constellation.Games.GameState do
                 status: updated_state.status
               }}
             )
-            
+
             # Also broadcast game_started event to ensure all players get the countdown
             Phoenix.PubSub.broadcast(
               Constellation.PubSub,
@@ -457,9 +548,9 @@ defmodule Constellation.Games.GameState do
                 categories: updated_state.current_categories
               }}
             )
-            
+
             {:ok, updated_state}
-            
+
           error -> error
         end
         # Return result tuple
