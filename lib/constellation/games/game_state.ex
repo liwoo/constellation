@@ -114,8 +114,11 @@ defmodule Constellation.Games.GameState do
         Logger.error("Cannot record submission, GameState not found for game #{game_id}")
         {:error, :not_found}
       state ->
+        # Ensure player_id is a string for consistent lookup
+        player_id_str = to_string(player_id)
+        
         # Add or overwrite the player's submission for the current round
-        updated_submissions = Map.put(state.current_round_submissions || %{}, player_id, answers)
+        updated_submissions = Map.put(state.current_round_submissions || %{}, player_id_str, answers)
 
         Logger.info("Recording submission for player #{player_id} in game #{game_id}, round #{state.current_round}")
         Logger.debug("Submissions map updated: #{inspect(updated_submissions)}")
@@ -539,36 +542,30 @@ defmodule Constellation.Games.GameState do
         else
           Logger.info("Verifying round #{state.current_round} for game #{game_id}, letter: #{state.current_letter}")
           
-          # Get player answers for the current round from round_entries
-          round_entries = Constellation.Games.RoundEntry.get_entries_for_round(game_id, state.current_round)
+          # Get player answers from the current round submissions
+          submissions = state.current_round_submissions || %{}
           
-          # Group entries by player
-          player_answers = round_entries
-            |> Enum.group_by(fn entry -> entry.player_id end)
-            |> Enum.map(fn {player_id, entries} -> 
-              # Find player name from the player association
-              player_name = case Enum.at(entries, 0) do
-                nil -> "Unknown Player"
-                entry -> 
-                  if entry.player && entry.player.name do
-                    entry.player.name
-                  else
-                    "Player #{player_id}"
-                  end
-              end
-              
-              # Convert entries to a map of category -> answer
-              answers = Enum.reduce(entries, %{}, fn entry, acc ->
-                Map.put(acc, entry.category, entry.answer)
-              end)
-              
-              # Return the player answer structure
-              %{
-                "session_id" => to_string(player_id),
-                "name" => player_name,
-                "answers" => answers
-              }
-            end)
+          # Convert to the format expected by the AIVerifier
+          player_answers = Enum.map(submissions, fn {player_id_str, answers} ->
+            # Find the player to get their name
+            player = try do
+              player_id = String.to_integer(player_id_str)
+              Constellation.Games.Player.get_player(player_id)
+            rescue
+              _ -> nil
+            end
+            
+            player_name = if player, do: player.name, else: "Player #{player_id_str}"
+            
+            Logger.debug("Looking for results for player #{player_name}: session_id=#{if player, do: player.session_id, else: "unknown"}, id=#{player_id_str}, found=#{!!player}")
+            
+            # Return the player answer structure
+            %{
+              "session_id" => player_id_str,
+              "name" => player_name,
+              "answers" => answers
+            }
+          end)
           
           Logger.info("Found #{length(player_answers)} player answer sets for verification")
           
