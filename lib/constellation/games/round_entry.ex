@@ -42,7 +42,7 @@ defmodule Constellation.Games.RoundEntry do
   """
   def create_entries_for_round(player_id, game_id, round_number, letter, answers) do
     # Convert the answers map to a list of entries
-    entries = Enum.map(answers, fn {category, answer} ->
+    Enum.each(answers, fn {category, answer} ->
       # Convert empty answers to "<blank>" for consistent handling
       formatted_answer = case answer do
         nil -> "<blank>"
@@ -50,25 +50,36 @@ defmodule Constellation.Games.RoundEntry do
         _ -> answer
       end
 
-      %{
-        player_id: player_id,
-        game_id: game_id,
-        round_number: round_number,
-        letter: letter,
-        category: to_string(category),
-        answer: formatted_answer,
-        score: 0 # Initial score, will be updated after scoring
-      }
+      # Check if an entry already exists
+      existing_entry = get_entry(player_id, game_id, round_number, category)
+
+      if existing_entry do
+        # Update existing entry
+        existing_entry
+        |> changeset(%{
+          answer: formatted_answer,
+          letter: letter
+        })
+        |> Repo.update()
+      else
+        # Create new entry
+        %__MODULE__{}
+        |> changeset(%{
+          player_id: player_id,
+          game_id: game_id,
+          round_number: round_number,
+          letter: letter,
+          category: to_string(category),
+          answer: formatted_answer,
+          score: 0 # Initial score, will be updated after scoring
+        })
+        |> Repo.insert()
+      end
     end)
-    
-    # Insert all entries in a transaction
-    Repo.transaction(fn ->
-      Enum.each(entries, fn entry ->
-        create_entry(entry)
-      end)
-    end)
+
+    :ok
   end
-  
+
   @doc """
   Get all entries for a specific round in a game
   """

@@ -56,6 +56,17 @@ config :tailwind,
 # Configure Tesla to use Hackney adapter
 config :tesla, adapter: Tesla.Adapter.Hackney
 
+config :tesla, Tesla.Adapter.Hackney,
+  recv_timeout: 30_000,
+  connect_timeout: 10_000,
+  max_retries: 3
+
+# Configures Hackney globally
+config :hackney,
+  timeout: 30_000,
+  recv_timeout: 30_000,
+  connect_timeout: 10_000
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

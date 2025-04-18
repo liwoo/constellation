@@ -19,7 +19,7 @@ defmodule Constellation.MixProject do
   def application do
     [
       mod: {Constellation.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :mixpanel_api_ex]
     ]
   end
 
@@ -61,7 +61,9 @@ defmodule Constellation.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      # Use the correct package name
+      {:mixpanel_api_ex, "~> 1.2"} # Add mixpanel dependency
     ]
   end
 

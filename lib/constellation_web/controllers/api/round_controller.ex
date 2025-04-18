@@ -24,7 +24,7 @@ defmodule ConstellationWeb.API.RoundController do
       stopped = params["stopped"] || false
       
       # Record player answers in the game state
-      GameState.record_player_answers(game_id, current_session_id, player.name, answers, stopped)
+      GameState.record_player_submission(game_id, player.id, answers)
       
       # Save round data to database
       case RoundEntry.create_entries_for_round(player.id, game_id, round_number, letter, answers) do

@@ -21,6 +21,7 @@
       <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/ssl_verify_fun" />
       <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/tesla" />
       <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/unicode_util_compat" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/mixpanel_api_ex" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -128,5 +129,9 @@
     <orderEntry type="library" name="inch_ex" level="project" />
     <orderEntry type="library" name="cowlib" level="project" />
     <orderEntry type="library" name="ranch" level="project" />
+    <orderEntry type="library" name="mixpanel" level="project" />
+    <orderEntry type="library" name="mixpanel_api_ex" level="project" />
+    <orderEntry type="library" name="mix_unused" level="project" />
+    <orderEntry type="library" name="propcheck" level="project" />
   </component>
 </module>

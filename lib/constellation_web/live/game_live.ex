@@ -426,7 +426,16 @@ defmodule ConstellationWeb.GameLive do
         mock_results = create_mock_verification_results(game_state)
         
         # Process the mock results
-        case Constellation.Games.GameState.process_verification_results(game_id, mock_results) do
+        # Construct the round context needed for process_verification_results/3
+        round_context = %{
+          current_round: game_state.current_round,
+          current_letter: game_state.current_letter,
+          current_categories: game_state.current_categories,
+          submissions: game_state.current_round_submissions || %{},
+          stopper_id: game_state.stopper_id
+        }
+        
+        case Constellation.Games.GameState.process_verification_results(game_id, mock_results, round_context) do
           {:ok, _} ->
             Logger.info("Mock verification completed successfully for game #{game_id}")
             {:noreply, socket |> assign(:verification_status, "completed")}
@@ -503,13 +512,11 @@ defmodule ConstellationWeb.GameLive do
       |> assign(:game_status, "collecting")
       |> assign(:verification_status, "starting") # Set verification status
       |> assign(:show_verification_modal, true)   # Show verification modal immediately
-    
-    # If this message includes submit_answers: true, submit this player's current answers
-    if Map.get(data, :submit_answers, false) do
-      Logger.info("Submitting answers in response to round stop by #{data.stopper_name}")
-      submit_current_player_answers(socket)
-    end
-    
+
+
+    # Always submit this player's current answers when a round is stopped
+    submit_current_player_answers(socket)
+
     # If this player is the owner, schedule a direct verification after a delay
     # This serves as a backup in case the initiate_aggregation message doesn't work
     if socket.assigns.is_owner do
@@ -825,6 +832,8 @@ defmodule ConstellationWeb.GameLive do
     player_id = socket.assigns.current_player.id
     form_values = socket.assigns.form_values || %{}
     current_categories = socket.assigns.current_categories
+    current_letter = socket.assigns.current_letter
+    current_round = socket.assigns.current_round
     
     Logger.info("Submitting answers for player #{player_id} in game #{game_id}: #{inspect(form_values)}")
     
@@ -841,6 +850,17 @@ defmodule ConstellationWeb.GameLive do
     case Constellation.Games.GameState.record_player_submission(game_id, player_id, complete_form_values) do
       {:ok, _updated_state} ->
         Logger.info("Successfully recorded submission for player #{player_id}")
+
+        #2. Also Save to the database as RoundEntries
+        Constellation.Games.RoundEntry.create_entries_for_round(
+          player_id,
+          game_id,
+          current_round,
+          current_letter,
+          complete_form_values
+        )
+
+        Logger.info("Successfully recorded submission for player #{player_id} in database")
       {:error, reason} ->
         Logger.error("Failed to record submission for player #{player_id}: #{inspect(reason)}")
     end

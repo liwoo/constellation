@@ -15,6 +15,8 @@ defmodule Constellation.API.GeminiClient do
       Middleware.JSON,
       {Tesla.Middleware.Query, [key: api_key]},
       {Middleware.Headers, [{"content-type", "application/json"}]},
+      {Tesla.Middleware.Retry, delay: 1000, max_retries: 3},
+      {Tesla.Middleware.Timeout, timeout: 30_000},
       Middleware.Logger
     ]
 
